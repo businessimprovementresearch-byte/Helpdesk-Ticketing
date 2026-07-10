@@ -2,16 +2,25 @@
 {% block title %}New Ticket{% endblock %}
 {% block content %}
 <h3 class="mb-3">Buat Tiket Baru</h3>
-<form method="post" class="bg-white p-4 rounded shadow-sm">
+<form method="post" enctype="multipart/form-data" class="bg-white p-4 rounded shadow-sm">
   {% csrf_token %}
   {{ form.non_field_errors }}
   {% for field in form %}
-  <div class="mb-3">
-    <label class="form-label">{{ field.label }}</label>
+  <div class="mb-3 {% if field.is_hidden %}d-none{% endif %}">
+    {% if not field.is_hidden %}<label class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>{% endif %}
     {{ field }}
+    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
     {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
   </div>
   {% endfor %}
+
+  <div class="mb-3">
+    <label class="form-label">Lampiran (opsional)</label>
+    {{ attachment_form.files }}
+    <div class="form-text">Maksimal 5 file, masing-masing maksimal 10MB.</div>
+    {% if attachment_form.files.errors %}<div class="text-danger small">{{ attachment_form.files.errors }}</div>{% endif %}
+  </div>
+
   <button type="submit" class="btn btn-primary">Submit Ticket</button>
 </form>
 {% endblock %}

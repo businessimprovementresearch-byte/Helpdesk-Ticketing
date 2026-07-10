@@ -26,13 +26,13 @@
 <table class="table table-bordered bg-white">
   <thead>
     <tr>
-      <th>#</th><th>Subject</th><th>Status</th><th>Priority</th><th>Source</th><th>Division</th><th>Dibuat</th>
+      <th>Kode Tiket</th><th>Subject</th><th>Status</th><th>Priority</th><th>Source</th><th>Division</th><th>Dibuat</th>
     </tr>
   </thead>
   <tbody>
     {% for ticket in tickets %}
     <tr>
-      <td>{{ ticket.id }}</td>
+      <td>{{ ticket.ticket_code|default:ticket.id }}</td>
       <td><a href="{% url 'tickets:detail' ticket.pk %}">{{ ticket.subject }}</a></td>
       <td><span class="badge bg-secondary">{{ ticket.get_status_display }}</span></td>
       <td>{{ ticket.get_priority_display }}</td>

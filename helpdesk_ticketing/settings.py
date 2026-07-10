@@ -198,6 +198,7 @@ if USE_SUPABASE_STORAGE:
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_AUTH = True  # signed URL, karena bucket-nya private
 else:
+    STORAGES["default"] = {"BACKEND": "django.core.files.storage.FileSystemStorage"}
     MEDIA_URL = 'media/'
     MEDIA_ROOT = BASE_DIR / 'media'
 

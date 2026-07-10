@@ -8,3 +8,4 @@ python-dotenv
 django-storages
 boto3
 imap-tools
+openpyxl

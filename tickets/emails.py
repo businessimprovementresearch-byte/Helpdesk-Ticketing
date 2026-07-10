@@ -27,6 +27,30 @@ def send_new_ticket_notification(ticket: Ticket):
     )
 
 
+def send_status_change_notification(ticket, old_status, changed_by=None):
+    """Kirim email ke customer pembuat tiket saat status tiket berubah."""
+    if ticket.status == old_status:
+        return
+    if not (ticket.created_by and ticket.created_by.email):
+        return
+    # Kalau yang mengubah status adalah si customer sendiri (mis. auto-reopen
+    # karena dia reply), tidak perlu kirim email ke dirinya sendiri.
+    if changed_by and changed_by.pk == getattr(ticket.created_by, "pk", None):
+        return
+
+    send_mail(
+        subject=ticket_email_subject(ticket),
+        message=(
+            f"Status tiket kamu berubah dari '{old_status}' menjadi "
+            f"'{ticket.get_status_display()}'.\n\n"
+            f"Lihat detail tiket di dashboard untuk info lebih lanjut."
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[ticket.created_by.email],
+        fail_silently=True,
+    )
+
+
 def send_reply_notification(reply):
     """Kirim notifikasi email saat ada balasan public (bukan internal note)."""
     if reply.type != reply.Type.PUBLIC_REPLY:

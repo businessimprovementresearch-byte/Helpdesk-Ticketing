@@ -1,20 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Users{% endblock %}
 {% block content %}
-<h3 class="mb-3">Users</h3>
-<table class="table table-bordered bg-white">
-  <thead><tr><th>Username</th><th>Nama</th><th>Email</th><th>Role</th><th>Division</th></tr></thead>
-  <tbody>
-    {% for u in users %}
-    <tr>
-      <td>{{ u.username }}</td>
-      <td>{{ u.get_full_name }}</td>
-      <td>{{ u.email }}</td>
-      <td>{{ u.get_role_display }}</td>
-      <td>{{ u.division|default:"-" }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-<p class="text-muted">Untuk menambah/mengedit user, gunakan <a href="/admin/">Django Admin</a>.</p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Users</h3>
+  <a href="{% url 'tickets:user_create' %}" class="btn btn-primary">+ User Baru</a>
+</div>
+
+<form method="post" id="bulk-form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="bulk_delete">
+  <div class="mb-2">
+    <button type="submit" class="btn btn-sm btn-outline-danger"
+            onclick="return confirm('Yakin ingin menghapus user yang dipilih?');">
+      Hapus Terpilih
+    </button>
+  </div>
+  <table class="table table-bordered bg-white align-middle">
+    <thead>
+      <tr>
+        <th><input type="checkbox" onclick="document.querySelectorAll('.user-check').forEach(c=>c.checked=this.checked)"></th>
+        <th>Username</th><th>Nama</th><th>Email</th><th>Role</th><th>Division</th><th>Status</th><th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>
+          {% if u.pk != user.pk %}
+          <input type="checkbox" name="selected_users" value="{{ u.pk }}" class="user-check">
+          {% endif %}
+        </td>
+        <td>{{ u.username }}</td>
+        <td>{{ u.get_full_name }}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.get_role_display }}</td>
+        <td>{{ u.division|default:"-" }}</td>
+        <td>{% if u.is_active %}<span class="badge bg-success">Aktif</span>{% else %}<span class="badge bg-secondary">Nonaktif</span>{% endif %}</td>
+        <td class="d-flex gap-2">
+          <a href="{% url 'tickets:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+          {% if u.pk != user.pk %}
+          <form method="post" action="{% url 'tickets:user_delete' u.pk %}"
+                onsubmit="return confirm('Yakin hapus user {{ u.username }}?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
 {% endblock %}
