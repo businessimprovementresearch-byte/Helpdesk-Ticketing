@@ -22,6 +22,7 @@ class Ticket(models.Model):
         EMAIL = "email", "Email"
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    ticket_code = models.CharField(max_length=20, unique=True, blank=True, db_index=True)
     subject = models.CharField(max_length=255)
     category = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
@@ -59,6 +60,30 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"[{self.get_status_display()}] {self.subject}"
+
+    @classmethod
+    def generate_ticket_code(cls, division=None):
+        """Kalau ada divisi, delegasikan ke Division.generate_next_ticket_code().
+        Kalau tidak (mis. tiket dari email tanpa divisi), pakai prefix 'GN-xxx'."""
+        from django.db import transaction
+
+        if division is not None:
+            return division.generate_next_ticket_code()
+
+        with transaction.atomic():
+            last_ticket = (
+                cls.objects.select_for_update()
+                .filter(ticket_code__startswith="GN-")
+                .order_by("-ticket_code")
+                .first()
+            )
+            next_number = 1
+            if last_ticket and "-" in last_ticket.ticket_code:
+                try:
+                    next_number = int(last_ticket.ticket_code.rsplit("-", 1)[-1]) + 1
+                except ValueError:
+                    pass
+            return f"GN-{next_number:03d}"
 
 
 class TicketReply(models.Model):

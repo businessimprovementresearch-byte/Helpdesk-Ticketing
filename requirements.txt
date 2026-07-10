@@ -5,3 +5,6 @@ psycopg2-binary
 requests
 urllib3
 python-dotenv
+django-storages
+boto3
+imap-tools
