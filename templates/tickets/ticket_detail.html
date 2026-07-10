@@ -1,100 +1,163 @@
 {% extends "base.html" %}
+{% load ticket_extras %}
+
 {% block title %}{{ ticket.subject }}{% endblock %}
+
 {% block content %}
-<div class="bg-white p-4 rounded shadow-sm mb-4">
-  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-    <div>
-      <h3 class="mb-1">{{ ticket.subject }} <small class="text-muted">{{ ticket.ticket_code }}</small></h3>
-      <p class="mb-0">
-        <span class="badge bg-secondary">{{ ticket.get_status_display }}</span>
-        <span class="badge bg-info text-dark">{{ ticket.get_priority_display }}</span>
-        <span class="badge bg-light text-dark border">{{ ticket.get_source_display }}</span>
-        {% if ticket.division %}<span class="badge bg-light text-dark border">{{ ticket.division }}</span>{% endif %}
-        {% if ticket.assigned_to %}<span class="badge bg-light text-dark border">👤 {{ ticket.assigned_to }}</span>{% endif %}
-      </p>
-    </div>
-  </div>
-  {% if ticket.nama_perusahaan or ticket.no_sj or ticket.salesman %}
-  <p class="text-muted small mb-0 mt-2">
-    {% if ticket.nama_perusahaan %}Perusahaan: {{ ticket.nama_perusahaan }} · {% endif %}
-    {% if ticket.no_sj %}No. SJ: {{ ticket.no_sj }} · {% endif %}
-    {% if ticket.salesman %}Salesman: {{ ticket.salesman }}{% endif %}
-  </p>
-  {% endif %}
-</div>
+<div class="row g-4">
+  <div class="col-lg-8">
 
-{% if can_manage_status %}
-<div class="bg-white p-4 rounded shadow-sm mb-4">
-  <h6 class="mb-3">Kelola Tiket (Agent/Admin)</h6>
-  <form method="post" class="row g-2 align-items-end">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="update_status">
-    <div class="col-md-3">
-      <label class="form-label small">Status</label>
-      {{ status_form.status }}
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-1">
+      <h2 class="fw-bold mb-0">{{ ticket.ticket_code|default:ticket.id }}</h2>
+      <span class="badge bg-{{ ticket.status|status_badge }}-subtle text-{{ ticket.status|status_badge }} border fs-6">
+        {{ ticket.status|status_id }}
+      </span>
     </div>
-    <div class="col-md-3">
-      <label class="form-label small">Priority</label>
-      {{ status_form.priority }}
-    </div>
-    <div class="col-md-3">
-      <label class="form-label small">Divisi</label>
-      {{ status_form.division }}
-    </div>
-    <div class="col-md-3">
-      <label class="form-label small">Ditugaskan Ke</label>
-      {{ status_form.assigned_to }}
-    </div>
-    <div class="col-12">
-      <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Simpan Perubahan</button>
-    </div>
-  </form>
-</div>
-{% endif %}
+    <p class="text-muted mb-4">{{ ticket.subject }}</p>
 
-<h5>Percakapan</h5>
-{% for reply in replies %}
-<div class="card mb-2 {% if reply.type == 'internal_note' %}border-warning{% endif %}">
-  <div class="card-body">
-    <div class="d-flex justify-content-between">
-      <strong>{{ reply.author|default:"(via email)" }}</strong>
-      <small class="text-muted">{{ reply.created_at|date:"d M Y H:i" }}</small>
+    <!-- Status Management -->
+    {% if can_manage_status %}
+    <div class="card-soft p-3 mb-3">
+      <div class="fw-semibold small text-muted mb-2">Kelola Tiket</div>
+      <form method="post" class="row g-2 align-items-end">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_status">
+        <div class="col-md-3">
+          <label class="form-label small">Status</label>
+          {{ status_form.status }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Prioritas</label>
+          {{ status_form.priority }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Divisi</label>
+          {{ status_form.division }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Ditugaskan Ke</label>
+          {{ status_form.assigned_to }}
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Simpan Perubahan</button>
+        </div>
+      </form>
     </div>
-    {% if reply.type == 'internal_note' %}<span class="badge bg-warning text-dark mb-2">Internal Note</span>{% endif %}
-    <p class="mb-2" style="white-space: pre-wrap;">{{ reply.message }}</p>
-    {% for att in reply.attachments.all %}
-      <a href="{% url 'tickets:attachment_download' att.pk %}" class="d-block">📎 {{ att.file_name }}</a>
-    {% endfor %}
-  </div>
-</div>
-{% empty %}
-<p class="text-muted">Belum ada balasan.</p>
-{% endfor %}
-
-<div class="bg-white p-4 rounded shadow-sm mt-4">
-  <h5>Tambah Balasan</h5>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="reply">
-    {{ reply_form.non_field_errors }}
-    <div class="mb-3">
-      {{ reply_form.message }}
-    </div>
-    {% if reply_form.type.field.widget.input_type != 'hidden' %}
-    <div class="mb-3">
-      <label class="form-label">Tipe</label>
-      {{ reply_form.type }}
-    </div>
-    {% else %}
-      {{ reply_form.type }}
     {% endif %}
-    <div class="mb-3">
-      <label class="form-label">Lampiran (opsional)</label>
-      {{ attachment_form.files }}
-      <div class="form-text">Maksimal 5 file, masing-masing maksimal 10MB.</div>
-      {% if attachment_form.files.errors %}<div class="text-danger small">{{ attachment_form.files.errors }}</div>{% endif %}
+
+    <!-- Replies -->
+    {% for reply in replies %}
+    <div class="card-soft p-3 mb-3{% if reply.type == 'internal_note' %} border-warning{% endif %}">
+      <div class="d-flex gap-3">
+
+        <div class="flex-grow-1">
+          <div class="d-flex justify-content-between align-items-start">
+            <strong>{{ reply.author|default:"(via email)" }}</strong>
+            <small class="text-muted">{{ reply.created_at|date:"d M, H:i" }}</small>
+          </div>
+
+          {% if reply.type == 'internal_note' %}
+          <span class="badge bg-warning text-dark mb-1">Catatan Internal</span>
+          {% endif %}
+
+          <p class="mb-1" style="white-space: pre-wrap;">{{ reply.message }}</p>
+
+          {% for att in reply.attachments.all %}
+          <a href="{% url 'tickets:attachment_download' att.pk %}" class="d-block small">
+            <i class="bi bi-paperclip"></i> {{ att.file_name }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
     </div>
-    <button type="submit" class="btn btn-primary">Kirim</button>
-  </form>
+    {% empty %}
+    <p class="text-muted">Belum ada balasan.</p>
+    {% endfor %}
+
+    <!-- Reply Form -->
+    <div class="card-soft p-3">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reply">
+
+        {{ reply_form.non_field_errors }}
+        {{ reply_form.message }}
+
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <div class="d-flex align-items-center gap-3">
+
+            <!-- Attachment Button -->
+            <label class="btn btn-sm btn-outline-secondary mb-0">
+              <i class="bi bi-paperclip"></i> Lampirkan File
+              <span class="visually-hidden">{{ attachment_form.files }}</span>
+            </label>
+
+            <!-- Internal Note Checkbox -->
+            {% if reply_form.type %}
+            <div class="form-check">
+              {{ reply_form.type }}
+              <label class="form-check-label small">Catatan Internal</label>
+            </div>
+            {% else %}
+            {{ reply_form.type }}
+            {% endif %}
+
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-send-fill"></i> Kirim Balasan
+          </button>
+        </div>
+
+        <div class="form-text mt-1">Maks. 5 file, 10MB/file.</div>
+
+        {% if attachment_form.files.errors %}
+        <div class="text-danger small">{{ attachment_form.files.errors }}</div>
+        {% endif %}
+
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <div class="card-soft p-3">
+      <div class="fw-semibold mb-3">Detail</div>
+
+      <label class="form-label small text-muted">Status</label>
+      <div class="mb-3">{{ ticket.status|status_id }}</div>
+
+      <label class="form-label small text-muted">Prioritas</label>
+      <div class="mb-3">{{ ticket.priority|priority_id }}</div>
+
+      <label class="form-label small text-muted">Divisi</label>
+      <div class="mb-3">
+        {% if ticket.division %}
+        <span class="badge bg-primary-subtle text-primary border">
+          {{ ticket.division }} ({{ ticket.division.code }})
+        </span>
+        {% else %}
+        -
+        {% endif %}
+      </div>
+
+      <label class="form-label small text-muted">Dibuat</label>
+      <div class="mb-3">
+        {{ ticket.created_at|date:"d M, Y" }}<br>
+        {{ ticket.created_at|date:"H:i" }}
+      </div>
+
+      <hr>
+
+      <div class="fw-semibold mb-2">Info Customer</div>
+      <label class="form-label small text-muted">Nama</label>
+      <div class="mb-2">{{ ticket.created_by.get_full_name|default:ticket.created_by.username }}</div>
+
+      <label class="form-label small text-muted">Email</label>
+      <div>{{ ticket.created_by.email }}</div>
+    </div>
+  </div>
 </div>
 {% endblock %}

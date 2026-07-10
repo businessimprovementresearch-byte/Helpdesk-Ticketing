@@ -4,6 +4,26 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.db.models import Avg, F, ExpressionWrapper, DurationField
+from django.core.paginator import Paginator
+
+@login_required
+def dashboard(request):
+    visible = _visible_tickets_for(request.user)
+
+    closed_qs = visible.filter(status=Ticket.Status.CLOSED).annotate(
+        resolution_time=ExpressionWrapper(F("updated_at") - F("created_at"), output_field=DurationField())
+    )
+    avg_duration = closed_qs.aggregate(avg=Avg("resolution_time"))["avg"]
+    avg_hours = round(avg_duration.total_seconds() / 3600, 1) if avg_duration else 0
+
+    return render(request, "tickets/dashboard.html", {
+        "open_count": visible.filter(status=Ticket.Status.OPEN).count(),
+        "pending_count": visible.filter(status=Ticket.Status.PENDING).count(),
+        "closed_count": visible.filter(status=Ticket.Status.CLOSED).count(),
+        "avg_hours": avg_hours,
+        "recent_tickets": visible.select_related("created_by")[:5],
+    })
 
 from accounts.models import Division
 from .emails import (
@@ -39,20 +59,28 @@ def _visible_tickets_for(user):
 
 @login_required
 def index(request):
-    tickets = _visible_tickets_for(request.user)
+    tickets = _visible_tickets_for(request.user).select_related("division", "assigned_to")
 
     status = request.GET.get("status")
+    priority = request.GET.get("priority")
+    q = request.GET.get("q")
+
     if status:
         tickets = tickets.filter(status=status)
-
-    q = request.GET.get("q")
+    if priority:
+        tickets = tickets.filter(priority=priority)
     if q:
         tickets = tickets.filter(subject__icontains=q)
 
+    paginator = Paginator(tickets, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
     return render(request, "tickets/index.html", {
-        "tickets": tickets.select_related("division", "assigned_to")[:200],
-        "status_choices": Ticket.Status.choices,
+        "page_obj": page_obj,
+        "status_options": [{"value": v, "label": l, "selected": v == (status or "")} for v, l in Ticket.Status.choices],
+        "priority_options": [{"value": v, "label": l, "selected": v == (priority or "")} for v, l in Ticket.Priority.choices],
         "current_status": status or "",
+        "current_priority": priority or "",
         "q": q or "",
     })
 

@@ -8,12 +8,12 @@
       {% csrf_token %}
       {{ form.non_field_errors }}
       <div class="mb-3">
-        <label class="form-label">Username</label>
+        <label class="form-label">Alamat Email</label>
         {{ form.username.errors }}
-        <input type="text" name="username" class="form-control" required autofocus>
+        <input type="email" name="username" class="form-control" placeholder="contoh@email.com" required autofocus>
       </div>
       <div class="mb-3">
-        <label class="form-label">Password</label>
+        <label class="form-label">Kata Sandi</label>
         {{ form.password.errors }}
         <input type="password" name="password" class="form-control" required>
       </div>

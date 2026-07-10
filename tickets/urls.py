@@ -5,6 +5,9 @@ from . import views
 app_name = "tickets"
 
 urlpatterns = [
+    #Dashboard
+    path("dashboard/", views.dashboard, name="dashboard"),
+    
     path("", views.index, name="index"),
     path("create/", views.ticket_create, name="create"),
     path("<int:pk>/", views.ticket_detail, name="detail"),

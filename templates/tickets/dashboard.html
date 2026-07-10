@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Dasbor{% endblock %}
+{% block content %}
+<h2 class="fw-bold mb-1">Dasbor</h2>
+<p class="text-muted mb-4">Ringkasan aktivitas helpdesk Anda.</p>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-card-icon mb-3" style="background:#e8f0fe;color:#2f5fdc;"><i
+                    class="bi bi-envelope-fill"></i></div>
+            <div class="stat-card-value" style="color:#2f5fdc;">{{ open_count }}</div>
+            <div class="stat-card-label">Tiket Terbuka</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-card-icon mb-3" style="background:#fdf1e0;color:#d38a1f;"><i class="bi bi-clock-fill"></i>
+            </div>
+            <div class="stat-card-value" style="color:#d38a1f;">{{ pending_count }}</div>
+            <div class="stat-card-label">Menunggu</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-card-icon mb-3" style="background:#e6f6ec;color:#22883f;"><i
+                    class="bi bi-check-circle-fill"></i></div>
+            <div class="stat-card-value" style="color:#22883f;">{{ closed_count }}</div>
+            <div class="stat-card-label">Selesai</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-card-icon mb-3" style="background:#fbe9ea;color:var(--color-primary);"><i
+                    class="bi bi-lightning-fill"></i></div>
+            <div class="stat-card-value" style="color:var(--color-primary);">{{ avg_hours }} <small
+                    class="fs-6 fw-normal">jam</small></div>
+            <div class="stat-card-label">Waktu Rata-rata</div>
+        </div>
+    </div>
+</div>
+
+<div class="card-soft p-3">
+    <div class="d-flex justify-content-between align-items-center mb-2 px-2 pt-1">
+        <div class="fw-semibold"><i class="bi bi-clock-history me-1"></i> Aktivitas Terbaru</div>
+        <a href="{% url 'tickets:index' %}" class="text-decoration-none" style="color:var(--color-primary);">Lihat Semua
+            <i class="bi bi-chevron-right"></i></a>
+    </div>
+    {% for t in recent_tickets %}
+    <a href="{% url 'tickets:detail' t.pk %}"
+        class="d-flex justify-content-between align-items-center text-decoration-none text-dark px-2 py-3 border-top">
+        <div class="d-flex align-items-center gap-2">
+            <span
+                style="width:8px;height:8px;border-radius:50%;background:var(--color-primary);display:inline-block;"></span>
+            <div>
+                <div class="fw-semibold">{{ t.subject }}</div>
+                <div class="text-muted small">{{ t.created_by.get_full_name|default:t.created_by.username }} · {{
+                    t.updated_at|timesince }} yang lalu</div>
+            </div>
+        </div>
+        <i class="bi bi-chevron-right text-muted"></i>
+    </a>
+    {% empty %}
+    <p class="text-muted px-2 py-3">Belum ada aktivitas.</p>
+    {% endfor %}
+</div>
+{% endblock %}

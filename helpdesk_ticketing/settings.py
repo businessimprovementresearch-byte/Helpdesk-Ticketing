@@ -66,8 +66,13 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'accounts.User'
 
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.EmailBackend",
+    "django.contrib.auth.backends.ModelBackend",  # keep as fallback for /admin/
+]
+
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'tickets:index'
+LOGIN_REDIRECT_URL = 'tickets:dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
 MIDDLEWARE = [
