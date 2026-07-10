@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Divisions{% endblock %}
+{% block content %}
+<h3 class="mb-3">Divisions</h3>
+<table class="table table-bordered bg-white">
+  <thead><tr><th>Nama</th><th>Deskripsi</th></tr></thead>
+  <tbody>
+    {% for d in divisions %}
+    <tr><td>{{ d.name }}</td><td>{{ d.description }}</td></tr>
+    {% empty %}
+    <tr><td colspan="2" class="text-center text-muted">Belum ada divisi.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="text-muted">Untuk menambah divisi, gunakan <a href="/admin/">Django Admin</a>.</p>
+{% endblock %}

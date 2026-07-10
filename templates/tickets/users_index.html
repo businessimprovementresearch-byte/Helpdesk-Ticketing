@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<h3 class="mb-3">Users</h3>
+<table class="table table-bordered bg-white">
+  <thead><tr><th>Username</th><th>Nama</th><th>Email</th><th>Role</th><th>Division</th></tr></thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td>{{ u.get_full_name }}</td>
+      <td>{{ u.email }}</td>
+      <td>{{ u.get_role_display }}</td>
+      <td>{{ u.division|default:"-" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="text-muted">Untuk menambah/mengedit user, gunakan <a href="/admin/">Django Admin</a>.</p>
+{% endblock %}

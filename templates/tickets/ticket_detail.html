@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.subject }}{% endblock %}
+{% block content %}
+<div class="bg-white p-4 rounded shadow-sm mb-4">
+  <h3>{{ ticket.subject }} <small class="text-muted">#{{ ticket.id }}</small></h3>
+  <p>
+    <span class="badge bg-secondary">{{ ticket.get_status_display }}</span>
+    <span class="badge bg-info text-dark">{{ ticket.get_priority_display }}</span>
+    <span class="badge bg-light text-dark border">{{ ticket.get_source_display }}</span>
+    {% if ticket.division %}<span class="badge bg-light text-dark border">{{ ticket.division }}</span>{% endif %}
+  </p>
+  {% if ticket.nama_perusahaan or ticket.no_sj or ticket.salesman %}
+  <p class="text-muted small mb-0">
+    {% if ticket.nama_perusahaan %}Perusahaan: {{ ticket.nama_perusahaan }} · {% endif %}
+    {% if ticket.no_sj %}No. SJ: {{ ticket.no_sj }} · {% endif %}
+    {% if ticket.salesman %}Salesman: {{ ticket.salesman }}{% endif %}
+  </p>
+  {% endif %}
+</div>
+
+<h5>Percakapan</h5>
+{% for reply in replies %}
+<div class="card mb-2 {% if reply.type == 'internal_note' %}border-warning{% endif %}">
+  <div class="card-body">
+    <div class="d-flex justify-content-between">
+      <strong>{{ reply.author|default:"(via email)" }}</strong>
+      <small class="text-muted">{{ reply.created_at|date:"d M Y H:i" }}</small>
+    </div>
+    {% if reply.type == 'internal_note' %}<span class="badge bg-warning text-dark mb-2">Internal Note</span>{% endif %}
+    <p class="mb-2" style="white-space: pre-wrap;">{{ reply.message }}</p>
+    {% for att in reply.attachments.all %}
+      <a href="{% url 'tickets:attachment_download' att.pk %}" class="d-block">📎 {{ att.file_name }}</a>
+    {% endfor %}
+  </div>
+</div>
+{% empty %}
+<p class="text-muted">Belum ada balasan.</p>
+{% endfor %}
+
+<div class="bg-white p-4 rounded shadow-sm mt-4">
+  <h5>Tambah Balasan</h5>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ reply_form.non_field_errors }}
+    <div class="mb-3">
+      {{ reply_form.message }}
+    </div>
+    {% if reply_form.type.field.widget.input_type != 'hidden' %}
+    <div class="mb-3">
+      <label class="form-label">Tipe</label>
+      {{ reply_form.type }}
+    </div>
+    {% else %}
+      {{ reply_form.type }}
+    {% endif %}
+    <div class="mb-3">
+      <label class="form-label">Lampiran (opsional)</label>
+      {{ attachment_form.file }}
+    </div>
+    <button type="submit" class="btn btn-primary">Kirim</button>
+  </form>
+</div>
+{% endblock %}

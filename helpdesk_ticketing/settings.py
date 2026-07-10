@@ -24,14 +24,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-pj&rw21tw3@3e_t((tr^rtrquly!*bh^4w3l*a04q!ls#893dc'
+SECRET_KEY = os.getenv(
+    'SECRET_KEY',
+    'django-insecure-pj&rw21tw3@3e_t((tr^rtrquly!*bh^4w3l*a04q!ls#893dc',
+)
 
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False' if PRODUCTION else 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = [
+    h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()
+]
+
+# Render menyediakan hostname eksternal lewat env var ini secara otomatis
+RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
+]
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
 
 # Application definition
@@ -43,10 +59,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
+    'accounts',
+    'tickets',
 ]
+
+AUTH_USER_MODEL = 'accounts.User'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'tickets:index'
+LOGOUT_REDIRECT_URL = 'login'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -60,7 +86,7 @@ ROOT_URLCONF = 'helpdesk_ticketing.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -135,8 +161,74 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# ---------------------------------------------------------------------------
+# File storage: attachment tiket disimpan di Supabase Storage (S3-compatible)
+# kalau kredensialnya ada di env. Kalau tidak (misal saat development lokal),
+# fallback ke filesystem lokal biasa.
+# ---------------------------------------------------------------------------
+
+USE_SUPABASE_STORAGE = bool(os.getenv('SUPABASE_S3_ACCESS_KEY_ID'))
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+if USE_SUPABASE_STORAGE:
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
+
+    AWS_ACCESS_KEY_ID = os.getenv('SUPABASE_S3_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('SUPABASE_S3_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('SUPABASE_S3_BUCKET', 'attachments')
+    # Contoh: https://<project-ref>.supabase.co/storage/v1/s3
+    AWS_S3_ENDPOINT_URL = os.getenv('SUPABASE_S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = os.getenv('SUPABASE_S3_REGION', 'ap-southeast-1')
+    AWS_S3_ADDRESSING_STYLE = 'path'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = True  # signed URL, karena bucket-nya private
+else:
+    MEDIA_URL = 'media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# ---------------------------------------------------------------------------
+# Email keluar (SMTP) — dipakai untuk notifikasi & balasan tiket
+# ---------------------------------------------------------------------------
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zoho.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+# Kalau kredensial email belum diisi (misal saat development), tulis email ke
+# console saja biar gak error saat testing.
+if not EMAIL_HOST_USER:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+# ---------------------------------------------------------------------------
+# IMAP — dipakai oleh management command `fetch_emails` untuk mengubah email
+# masuk jadi tiket baru secara otomatis. Dijalankan berkala lewat Render Cron Job.
+# ---------------------------------------------------------------------------
+
+IMAP_HOST = os.getenv('IMAP_HOST', 'imap.gmail.com')
+IMAP_PORT = int(os.getenv('IMAP_PORT', '993'))
+IMAP_USERNAME = os.getenv('IMAP_USERNAME', '')
+IMAP_PASSWORD = os.getenv('IMAP_PASSWORD', '')
+IMAP_USE_SSL = os.getenv('IMAP_USE_SSL', 'True').lower() == 'true'
+IMAP_FOLDER = os.getenv('IMAP_FOLDER', 'INBOX')

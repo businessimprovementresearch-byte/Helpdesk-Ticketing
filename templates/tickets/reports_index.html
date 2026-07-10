@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h3 class="mb-3">Reports</h3>
+<div class="row g-3">
+  <div class="col-md-3"><div class="card bg-white p-3"><h6>Total Tiket</h6><h2>{{ summary.total }}</h2></div></div>
+  <div class="col-md-3"><div class="card bg-white p-3"><h6>Open</h6><h2>{{ summary.open }}</h2></div></div>
+  <div class="col-md-3"><div class="card bg-white p-3"><h6>Pending</h6><h2>{{ summary.pending }}</h2></div></div>
+  <div class="col-md-3"><div class="card bg-white p-3"><h6>Closed</h6><h2>{{ summary.closed }}</h2></div></div>
+</div>
+{% endblock %}
