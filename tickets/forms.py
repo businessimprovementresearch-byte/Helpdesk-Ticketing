@@ -45,21 +45,19 @@ class TicketForm(forms.ModelForm):
             "priority": forms.Select(attrs={"class": "form-select"}),
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user = user
-
-        # Divisi wajib dipilih, dan hanya divisi aktif yang muncul di pilihan
-        self.fields["division"].queryset = Division.objects.filter(is_active=True)
-        self.fields["division"].required = True
-        self.fields["division"].empty_label = "-- Pilih Divisi --"
-
-        # Priority cuma boleh diedit admin. Non-admin: field disembunyikan,
-        # nilainya dipaksa default Medium lewat clean_priority().
-        if not (self.user and getattr(self.user, "is_admin", False)):
-            self.fields["priority"].widget = forms.HiddenInput()
-            self.fields["priority"].required = False
-            self.initial["priority"] = Ticket.Priority.MEDIUM
+        self.fields["division"].required = False
+        self.fields["role"].choices = [
+            ("customer", "User (Pelanggan)"),
+            ("agent", "Operator"),
+            ("admin", "Admin"),
+        ]
+        if self.instance and self.instance.pk:
+            self.fields["password"].required = False
+        else:
+            self.fields["password"].required = True
+            self.fields["password"].help_text = "Password awal untuk user ini."
 
     def clean_priority(self):
         if not (self.user and getattr(self.user, "is_admin", False)):
@@ -150,12 +148,15 @@ class DivisionForm(forms.ModelForm):
 
 
 class UserForm(forms.ModelForm):
-    """Dipakai admin untuk membuat/mengedit user. Password diisi terpisah (opsional saat edit)."""
-
     password = forms.CharField(
         required=False,
-        widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password"}),
+        widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password", "placeholder": "Min. 8 karakter"}),
         help_text="Kosongkan kalau tidak ingin mengubah password.",
+    )
+    password_confirm = forms.CharField(
+        required=False,
+        label="Konfirmasi",
+        widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password", "placeholder": "Ulangi password"}),
     )
 
     class Meta:
@@ -182,12 +183,28 @@ class UserForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["division"].required = False
+        self.fields["role"].choices = [
+            ("customer", "User (Pelanggan)"),
+            ("agent", "Operator"),
+            ("admin", "Admin"),
+        ]
         if self.instance and self.instance.pk:
-            # Saat edit, password tidak wajib
             self.fields["password"].required = False
         else:
             self.fields["password"].required = True
+            self.fields["password_confirm"].required = True
             self.fields["password"].help_text = "Password awal untuk user ini."
+
+    def clean(self):
+        cleaned = super().clean()
+        password = cleaned.get("password")
+        confirm = cleaned.get("password_confirm")
+        if password or confirm:
+            if password != confirm:
+                self.add_error("password_confirm", "Password dan konfirmasi tidak sama.")
+            elif password and len(password) < 8:
+                self.add_error("password", "Password minimal 8 karakter.")
+        return cleaned
 
     def save(self, commit=True):
         user = super().save(commit=False)

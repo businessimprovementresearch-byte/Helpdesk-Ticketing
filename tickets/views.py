@@ -6,6 +6,7 @@ from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Avg, F, ExpressionWrapper, DurationField
 from django.core.paginator import Paginator
+from django.db.models import Q
 
 @login_required
 def dashboard(request):
@@ -256,15 +257,36 @@ def attachment_download(request, pk):
 def users_index(request):
     _admin_required(request.user)
 
-    if request.method == "POST" and request.POST.get("action") == "bulk_delete":
-        ids = request.POST.getlist("selected_users")
-        ids = [i for i in ids if str(i) != str(request.user.pk)]  # gak boleh hapus diri sendiri
-        deleted_count, _ = User.objects.filter(pk__in=ids).delete()
-        messages.success(request, f"{deleted_count} user berhasil dihapus.")
+    if request.method == "POST" and request.POST.get("action") == "change_role":
+        target = get_object_or_404(User, pk=request.POST.get("user_id"))
+        new_role = request.POST.get("new_role")
+        if new_role in dict(User.Role.choices):
+            target.role = new_role
+            target.save(update_fields=["role"])
+            messages.success(request, "Peran pengguna berhasil diubah.")
         return redirect("tickets:users")
 
+    q = request.GET.get("q")
+    role = request.GET.get("role")
+
+    users = User.objects.all().select_related("division").order_by("first_name", "username")
+    if q:
+        users = users.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q) | Q(username__icontains=q))
+    if role:
+        users = users.filter(role=role)
+
+    paginator = Paginator(users, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
     return render(request, "tickets/users_index.html", {
-        "users": User.objects.all().select_related("division").order_by("username"),
+        "page_obj": page_obj,
+        "q": q or "",
+        "current_role": role or "",
+        "role_options": [
+            {"value": v, "label": l, "selected": v == (role or "")}
+            for v, l in [("customer", "User"), ("agent", "Operator"), ("admin", "Admin")]
+        ],
+        "create_form": UserForm(),
     })
 
 

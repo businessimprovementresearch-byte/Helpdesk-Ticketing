@@ -1,54 +1,247 @@
 {% extends "base.html" %}
-{% block title %}Users{% endblock %}
+{% load ticket_extras %}
+{% block title %}Manajemen Pengguna{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h3>Users</h3>
-  <a href="{% url 'tickets:user_create' %}" class="btn btn-primary">+ User Baru</a>
+<h2 class="fw-bold mb-1">Manajemen Pengguna</h2>
+<p class="text-muted mb-4">Kelola akun pengguna dan hak akses sistem.</p>
+
+<div class="card-soft p-3 mb-4 d-flex flex-row gap-2">
+  <form method="get" class="d-flex gap-2 flex-grow-1">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Cari nama atau email...">
+    <select name="role" class="form-select" style="max-width:180px;" onchange="this.form.submit()">
+      <option value="">Semua Peran</option>
+      {% for opt in role_options %}
+      <option value="{{ opt.value }}" {% if opt.selected %}selected{% endif %}>{{ opt.label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#createUserModal">
+    <i class="bi bi-plus-lg"></i> Tambah
+  </button>
 </div>
 
 <form method="post" id="bulk-form">
   {% csrf_token %}
   <input type="hidden" name="action" value="bulk_delete">
-  <div class="mb-2">
-    <button type="submit" class="btn btn-sm btn-outline-danger"
-            onclick="return confirm('Yakin ingin menghapus user yang dipilih?');">
-      Hapus Terpilih
+
+  <div id="bulk-bar" class="d-none justify-content-between align-items-center card-soft p-3 mb-3"
+    style="background:#fdeeee;border-color:#f5c6c6;">
+    <span class="text-danger fw-semibold"><span id="bulk-count">0</span> pengguna dipilih</span>
+    <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin ingin menghapus user yang dipilih?');">
+      <i class="bi bi-trash-fill me-1"></i> Hapus Terpilih
     </button>
   </div>
-  <table class="table table-bordered bg-white align-middle">
-    <thead>
-      <tr>
-        <th><input type="checkbox" onclick="document.querySelectorAll('.user-check').forEach(c=>c.checked=this.checked)"></th>
-        <th>Username</th><th>Nama</th><th>Email</th><th>Role</th><th>Division</th><th>Status</th><th>Aksi</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for u in users %}
-      <tr>
-        <td>
-          {% if u.pk != user.pk %}
-          <input type="checkbox" name="selected_users" value="{{ u.pk }}" class="user-check">
-          {% endif %}
-        </td>
-        <td>{{ u.username }}</td>
-        <td>{{ u.get_full_name }}</td>
-        <td>{{ u.email }}</td>
-        <td>{{ u.get_role_display }}</td>
-        <td>{{ u.division|default:"-" }}</td>
-        <td>{% if u.is_active %}<span class="badge bg-success">Aktif</span>{% else %}<span class="badge bg-secondary">Nonaktif</span>{% endif %}</td>
-        <td class="d-flex gap-2">
-          <a href="{% url 'tickets:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-          {% if u.pk != user.pk %}
-          <form method="post" action="{% url 'tickets:user_delete' u.pk %}"
-                onsubmit="return confirm('Yakin hapus user {{ u.username }}?');">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+  <div class="card-soft">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th class="ps-3"><input type="checkbox"
+              onclick="document.querySelectorAll('.user-check').forEach(c=>c.checked=this.checked)"></th>
+          <th>Pengguna</th>
+          <th>Email</th>
+          <th>Peran</th>
+          <th>Bergabung</th>
+          <th class="text-end pe-3">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in page_obj %}
+        <tr>
+          <td class="ps-3">
+            {% if u.pk != user.pk %}
+            <input type="checkbox" name="selected_users" value="{{ u.pk }}" class="user-check">
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="sidebar-user-avatar flex-shrink-0" style="width:32px;height:32px;font-size:.7rem;">{{
+                u|initials }}</div>
+              <span class="fw-semibold text-nowrap">{{ u.get_full_name|default:u.username }}</span>
+            </div>
+          </td>
+          <td class="text-muted">{{ u.email }}</td>
+          <td>
+            <span class="badge bg-{{ u.role|role_badge }}-subtle text-{{ u.role|role_badge }} border">{{
+              u.role|role_label }}</span>
+          </td>
+          <td class="text-muted">{{ u.date_joined|date:"d M Y" }}</td>
+          <td class="text-end pe-3">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'tickets:user_edit' u.pk %}"><i
+                      class="bi bi-pencil-fill me-2"></i>Edit</a></li>
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+                {% if u.role != "admin" %}
+                <li>
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_role">
+                    <input type="hidden" name="user_id" value="{{ u.pk }}">
+                    <input type="hidden" name="new_role" value="admin">
+                    <button type="submit" class="dropdown-item"><i class="bi bi-shield-fill-check me-2"></i>Jadikan
+                      Admin</button>
+                  </form>
+                </li>
+                {% endif %}
+                {% if u.role != "agent" %}
+                <li>
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_role">
+                    <input type="hidden" name="user_id" value="{{ u.pk }}">
+                    <input type="hidden" name="new_role" value="agent">
+                    <button type="submit" class="dropdown-item"><i class="bi bi-people-fill me-2"></i>Jadikan
+                      Operator</button>
+                  </form>
+                </li>
+                {% endif %}
+                {% if u.role != "customer" %}
+                <li>
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_role">
+                    <input type="hidden" name="user_id" value="{{ u.pk }}">
+                    <input type="hidden" name="new_role" value="customer">
+                    <button type="submit" class="dropdown-item"><i class="bi bi-person-fill me-2"></i>Jadikan
+                      User</button>
+                  </form>
+                </li>
+                {% endif %}
+                {% if u.pk != user.pk %}
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+                <li>
+                  <form method="post" action="{% url 'tickets:user_delete' u.pk %}"
+                    onsubmit="return confirm('Yakin hapus user ini?');">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-danger"><i
+                        class="bi bi-trash-fill me-2"></i>Hapus</button>
+                  </form>
+                </li>
+                {% endif %}
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">Belum ada pengguna.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </form>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-between align-items-center mt-3">
+  <div class="text-muted small">Menampilkan {{ page_obj.start_index }}-{{ page_obj.end_index }} dari {{
+    page_obj.paginator.count }} hasil</div>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+      <li class="page-item {% if num == page_obj.number %}active{% endif %}"><a class="page-link"
+          href="?page={{ num }}">{{ num }}</a></li>
+      {% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.next_page_number }}">&rsaquo;</a></li>{% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+<div class="modal fade" id="createUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'tickets:user_create' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title fw-bold">Tambah Pengguna Baru</h5>
+            <p class="text-muted small mb-0">Isi data pengguna baru.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          {{ create_form.non_field_errors }}
+          <div class="mb-3">
+            <label class="form-label">Nama Lengkap</label>
+            {{ create_form.first_name }}
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-7">
+              <label class="form-label">Email</label>
+              {{ create_form.email }}
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Peran</label>
+              {{ create_form.role }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Perusahaan</label>
+            {{ create_form.company }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Alamat</label>
+            {{ create_form.address }}
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Nomor HP</label>
+              {{ create_form.phone_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Jabatan</label>
+              {{ create_form.position }}
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Password</label>
+              {{ create_form.password }}
+              {% if create_form.password.errors %}<div class="text-danger small">{{ create_form.password.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Konfirmasi</label>
+              {{ create_form.password_confirm }}
+              {% if create_form.password_confirm.errors %}<div class="text-danger small">{{
+                create_form.password_confirm.errors }}</div>{% endif %}
+            </div>
+          </div>
+          <input type="hidden" name="username" id="auto-username">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary">Buat Akun</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  document.querySelector('#createUserModal form').addEventListener('submit', function () {
+    const email = this.querySelector('[name=email]').value;
+    document.getElementById('auto-username').value = email.split('@')[0];
+  });
+</script>
+<script>
+  function updateBulkBar() {
+    const checked = document.querySelectorAll('.user-check:checked').length;
+    const bar = document.getElementById('bulk-bar');
+    document.getElementById('bulk-count').textContent = checked;
+    bar.classList.toggle('d-none', checked === 0);
+    bar.classList.toggle('d-flex', checked > 0);
+  }
+  document.querySelectorAll('.user-check').forEach(cb => cb.addEventListener('change', updateBulkBar));
+  document.querySelector('thead input[type=checkbox]').addEventListener('click', () => setTimeout(updateBulkBar));
+</script>
 {% endblock %}

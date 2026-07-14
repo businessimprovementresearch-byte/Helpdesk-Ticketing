@@ -1,24 +1,184 @@
 {% extends "base.html" %}
-{% block title %}{% if is_new %}User Baru{% else %}Edit User{% endif %}{% endblock %}
+{% load ticket_extras %}
+{% block title %}Manajemen Pengguna{% endblock %}
 {% block content %}
-<h3 class="mb-3">{% if is_new %}User Baru{% else %}Edit User: {{ target_user.username }}{% endif %}</h3>
-<form method="post" class="bg-white p-4 rounded shadow-sm" style="max-width: 600px;">
+<h2 class="fw-bold mb-1">Manajemen Pengguna</h2>
+<p class="text-muted mb-4">Kelola akun pengguna dan hak akses sistem.</p>
+
+<div class="card-soft p-3 mb-4 d-flex flex-row gap-2">
+  <form method="get" class="d-flex gap-2 flex-grow-1">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Cari nama atau email...">
+    <select name="role" class="form-select" style="max-width:180px;" onchange="this.form.submit()">
+      <option value="">Semua Peran</option>
+      {% for opt in role_options %}
+      <option value="{{ opt.value }}" {% if opt.selected %}selected{% endif %}>{{ opt.label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#createUserModal">
+    <i class="bi bi-plus-lg"></i> Tambah
+  </button>
+</div>
+
+<form method="post" id="bulk-form">
   {% csrf_token %}
-  {{ form.non_field_errors }}
-  {% for field in form %}
-  <div class="mb-3 {% if field.name == 'is_active' %}form-check{% endif %}">
-    {% if field.name == 'is_active' %}
-      {{ field }}
-      <label class="form-check-label">{{ field.label }}</label>
-    {% else %}
-      <label class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
-      {{ field }}
-    {% endif %}
-    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-    {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+  <input type="hidden" name="action" value="bulk_delete">
+  <div class="card-soft">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th class="ps-3"><input type="checkbox"
+              onclick="document.querySelectorAll('.user-check').forEach(c=>c.checked=this.checked)"></th>
+          <th>Pengguna</th>
+          <th>Email</th>
+          <th>Peran</th>
+          <th>Bergabung</th>
+          <th class="text-end pe-3">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in page_obj %}
+        <tr>
+          <td class="ps-3">
+            {% if u.pk != user.pk %}
+            <input type="checkbox" name="selected_users" value="{{ u.pk }}" class="user-check">
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="sidebar-user-avatar" style="width:32px;height:32px;font-size:.75rem;">{{ u|initials }}</div>
+              <span class="fw-semibold">{{ u.get_full_name|default:u.username }}</span>
+            </div>
+          </td>
+          <td class="text-muted">{{ u.email }}</td>
+          <td>
+            <span class="badge bg-{{ u.role|role_badge }}-subtle text-{{ u.role|role_badge }} border">{{
+              u.role|role_label }}</span>
+          </td>
+          <td class="text-muted">{{ u.date_joined|date:"d M Y" }}</td>
+          <td class="text-end pe-3">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'tickets:user_edit' u.pk %}">Edit</a></li>
+                {% if u.pk != user.pk %}
+                <li>
+                  <form method="post" action="{% url 'tickets:user_delete' u.pk %}"
+                    onsubmit="return confirm('Yakin hapus user ini?');">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-danger">Hapus</button>
+                  </form>
+                </li>
+                {% endif %}
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">Belum ada pengguna.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-  {% endfor %}
-  <button type="submit" class="btn btn-primary">Simpan</button>
-  <a href="{% url 'tickets:users' %}" class="btn btn-outline-secondary">Batal</a>
+  <button type="submit" class="btn btn-sm btn-outline-danger mt-2"
+    onclick="return confirm('Yakin ingin menghapus user yang dipilih?');">Hapus Terpilih</button>
 </form>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-between align-items-center mt-3">
+  <div class="text-muted small">Menampilkan {{ page_obj.start_index }}-{{ page_obj.end_index }} dari {{
+    page_obj.paginator.count }} hasil</div>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+      <li class="page-item {% if num == page_obj.number %}active{% endif %}"><a class="page-link"
+          href="?page={{ num }}">{{ num }}</a></li>
+      {% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link"
+          href="?page={{ page_obj.next_page_number }}">&rsaquo;</a></li>{% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+<div class="modal fade" id="createUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'tickets:user_create' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title fw-bold">Tambah Pengguna Baru</h5>
+            <p class="text-muted small mb-0">Isi data pengguna baru.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          {{ create_form.non_field_errors }}
+          <div class="mb-3">
+            <label class="form-label">Nama Lengkap</label>
+            {{ create_form.first_name }}
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-7">
+              <label class="form-label">Email</label>
+              {{ create_form.email }}
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Peran</label>
+              {{ create_form.role }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Perusahaan</label>
+            {{ create_form.company }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Alamat</label>
+            {{ create_form.address }}
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Nomor HP</label>
+              {{ create_form.phone_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Jabatan</label>
+              {{ create_form.position }}
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Password</label>
+              {{ create_form.password }}
+              {% if create_form.password.errors %}<div class="text-danger small">{{ create_form.password.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Konfirmasi</label>
+              {{ create_form.password_confirm }}
+              {% if create_form.password_confirm.errors %}<div class="text-danger small">{{
+                create_form.password_confirm.errors }}</div>{% endif %}
+            </div>
+          </div>
+          <input type="hidden" name="username" id="auto-username">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary">Buat Akun</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  document.querySelector('#createUserModal form').addEventListener('submit', function () {
+    const email = this.querySelector('[name=email]').value;
+    document.getElementById('auto-username').value = email.split('@')[0];
+  });
+</script>
 {% endblock %}
