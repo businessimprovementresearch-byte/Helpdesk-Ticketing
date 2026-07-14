@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Pengaturan{% endblock %}
+{% block content %}
+<h2 class="fw-bold mb-1">Pengaturan</h2>
+<p class="text-muted mb-4">Kelola profil dan pengaturan akun Anda.</p>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags|default:'success' }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-3">
+    <div class="card-soft p-2">
+      <a href="{% url 'accounts:settings_profile' %}"
+        class="d-flex align-items-center gap-2 px-3 py-2 rounded text-decoration-none text-dark {% if active_tab == 'profile' %}bg-light fw-semibold{% endif %}">
+        <i class="bi bi-person"></i> Profil
+      </a>
+      <a href="{% url 'accounts:settings_password' %}"
+        class="d-flex align-items-center gap-2 px-3 py-2 rounded text-decoration-none text-dark {% if active_tab == 'password' %}bg-light fw-semibold{% endif %}">
+        <i class="bi bi-lock"></i> Password
+      </a>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card-soft p-4">
+      {% block settings_content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

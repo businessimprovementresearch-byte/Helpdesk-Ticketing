@@ -186,10 +186,32 @@
         <i class="bi bi-chevron-expand text-muted"></i>
       </div>
       <ul class="dropdown-menu w-100">
+        <li class="px-3 py-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="sidebar-user-avatar">{{ user|initials }}</div>
+            <div>
+              <div class="fw-semibold small">{{ user.get_full_name|default:user.username }}</div>
+              <div class="text-muted small">{{ user.email }}</div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <hr class="dropdown-divider">
+        </li>
+        <li>
+          <a class="dropdown-item" href="{% url 'accounts:settings_profile' %}">
+            <i class="bi bi-gear"></i> Pengaturan
+          </a>
+        </li>
+        <li>
+          <hr class="dropdown-divider">
+        </li>
         <li>
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button class="dropdown-item" type="submit">Keluar</button>
+            <button class="dropdown-item" type="submit">
+              <i class="bi bi-box-arrow-right"></i> Keluar
+            </button>
           </form>
         </li>
       </ul>

@@ -11,6 +11,7 @@ from tickets.views import fetch_emails_webhook
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(pattern_name='tickets:dashboard', permanent=False)),
+    path('', include('accounts.urls')),
     path('tickets/', include('tickets.urls')),
     path('cron/fetch-emails/', fetch_emails_webhook, name='cron_fetch_emails'),
     # Login, logout, password reset (pakai template di templates/registration/)
