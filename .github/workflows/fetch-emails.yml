@@ -1,0 +1,14 @@
+name: Fetch emails cron
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit fetch-emails webhook
+        run: |
+          curl -sS -f "https://${{ secrets.RENDER_APP_HOST }}/cron/fetch-emails/?token=${{ secrets.CRON_SECRET }}"

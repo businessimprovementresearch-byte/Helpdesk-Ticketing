@@ -67,8 +67,7 @@
     <div class="text-muted small mb-2">Seret file ke sini atau klik tombol di bawah</div>
     {{ attachment_form.files }}
     <div class="form-text">Maksimal 5 file, masing-masing maksimal 10MB.</div>
-    {% if attachment_form.files.errors %}<div class="text-danger small">{{ attachment_form.files.errors }}</div>{% endif
-    %}
+    {% if attachment_form.files.errors %}<div class="text-danger small">{{ attachment_form.files.errors }}</div>{% endif %}
   </div>
 
   <div class="d-flex justify-content-end gap-2 border-top pt-3">

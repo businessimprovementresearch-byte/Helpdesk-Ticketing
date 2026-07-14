@@ -23,7 +23,8 @@ urlpatterns = [
     path("divisions/", views.divisions_index, name="divisions"),
     path("divisions/create/", views.division_create, name="division_create"),
     path("divisions/<int:pk>/edit/", views.division_edit, name="division_edit"),
-    path("divisions/<int:pk>/toggle/", views.division_toggle_active, name="division_toggle"),
+    path("divisions/<int:pk>/toggle/", views.division_toggle_active, name="division_toggle_active"),
+    path("divisions/<int:pk>/delete/", views.division_delete, name="division_delete"),
 
     # Reports
     path("reports/", views.reports_index, name="reports"),

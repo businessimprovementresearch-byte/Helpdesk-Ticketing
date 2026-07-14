@@ -45,19 +45,24 @@ class TicketForm(forms.ModelForm):
             "priority": forms.Select(attrs={"class": "form-select"}),
         }
 
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.fields["division"].required = False
+    #     self.fields["role"].choices = [
+    #         ("customer", "User (Pelanggan)"),
+    #         ("agent", "Operator"),
+    #         ("admin", "Admin"),
+    #     ]
+    #     if self.instance and self.instance.pk:
+    #         self.fields["password"].required = False
+    #     else:
+    #         self.fields["password"].required = True
+    #         self.fields["password"].help_text = "Password awal untuk user ini."
+
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["division"].required = False
-        self.fields["role"].choices = [
-            ("customer", "User (Pelanggan)"),
-            ("agent", "Operator"),
-            ("admin", "Admin"),
-        ]
-        if self.instance and self.instance.pk:
-            self.fields["password"].required = False
-        else:
-            self.fields["password"].required = True
-            self.fields["password"].help_text = "Password awal untuk user ini."
 
     def clean_priority(self):
         if not (self.user and getattr(self.user, "is_admin", False)):
@@ -134,8 +139,8 @@ class DivisionForm(forms.ModelForm):
         model = Division
         fields = ["name", "code", "description", "is_active"]
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control"}),
-            "code": forms.TextInput(attrs={"class": "form-control text-uppercase", "maxlength": 10}),
+            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Contoh: Officeking"}),
+            "code": forms.TextInput(attrs={"class": "form-control text-uppercase", "maxlength": 10, "placeholder": "Contoh: OK"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }

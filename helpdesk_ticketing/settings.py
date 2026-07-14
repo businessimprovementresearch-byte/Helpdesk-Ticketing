@@ -238,3 +238,7 @@ IMAP_USERNAME = os.getenv('IMAP_USERNAME', '')
 IMAP_PASSWORD = os.getenv('IMAP_PASSWORD', '')
 IMAP_USE_SSL = os.getenv('IMAP_USE_SSL', 'True').lower() == 'true'
 IMAP_FOLDER = os.getenv('IMAP_FOLDER', 'INBOX')
+
+# Secret token buat endpoint /cron/fetch-emails/ — dipanggil dari GitHub
+# Actions scheduled workflow (gratis), bukan Render Cron Job (berbayar).
+CRON_SECRET = os.getenv('CRON_SECRET', '')

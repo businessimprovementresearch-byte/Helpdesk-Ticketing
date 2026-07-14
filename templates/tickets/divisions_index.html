@@ -34,8 +34,7 @@
   <div class="d-flex justify-content-between align-items-center px-2 py-3 border-top">
     <div class="d-flex align-items-center gap-3">
       <div class="d-flex align-items-center justify-content-center fw-bold"
-        style="width:48px;height:48px;border:1px solid #eceef1;border-radius:.6rem;color:var(--color-primary);">{{
-        d.code }}</div>
+        style="width:48px;height:48px;border:1px solid #eceef1;border-radius:.6rem;color:var(--color-primary);">{{ d.code }}</div>
       <div>
         <div class="fw-semibold">{{ d.name }}</div>
         <div class="text-muted small">
@@ -46,21 +45,22 @@
       </div>
     </div>
     <div class="d-flex gap-2">
+      <a href="{% url 'tickets:index' %}?division={{ d.pk }}" class="btn btn-sm btn-light" title="Lihat Tiket"><i
+          class="bi bi-eye-fill text-success"></i></a>
       <a href="{% url 'tickets:division_edit' d.pk %}" class="btn btn-sm btn-light" title="Edit"><i
           class="bi bi-pencil-fill text-primary"></i></a>
-      <form method="post" action="{% url 'tickets:division_toggle_active' d.pk %}" class="d-inline">
+      <form method="post" action="{% url 'tickets:division_delete' d.pk %}" class="d-inline"
+        onsubmit="return confirm('Hapus divisi {{ d.name }}? Tiket yang sudah ada tidak akan terhapus.');">
         {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-light"
-          title="{% if d.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}">
-          <i
-            class="bi bi-{% if d.is_active %}slash-circle text-warning{% else %}check-circle text-success{% endif %}"></i>
+        <button type="submit" class="btn btn-sm btn-light" title="Hapus">
+          <i class="bi bi-trash-fill text-danger"></i>
         </button>
       </form>
     </div>
   </div>
-  {% empty %}
+{% empty %}
   <p class="text-muted px-2 py-3">Belum ada divisi.</p>
-  {% endfor %}
+{% endfor %}
 </div>
 
 <div class="card-soft p-3 mt-4" style="background:#eef4ff;border-color:#d7e3fb;">
@@ -68,8 +68,7 @@
     <i class="bi bi-info-circle-fill text-primary"></i>
     <div>
       <div class="fw-semibold">Cara kerja kode tiket</div>
-      <div class="text-muted small">Setiap divisi memiliki kode unik (misal: OK, OP, FS). Saat user membuat tiket dan
-        memilih divisi, kode tiket akan otomatis di-generate secara berurutan: OK-001, OK-002, OK-003, dst.</div>
+      <div class="text-muted small">Setiap divisi memiliki kode unik (misal: OK, OP, FS). Saat user membuat tiket dan memilih divisi, kode tiket akan otomatis di-generate secara berurutan: OK-001, OK-002, OK-003, dst.</div>
     </div>
   </div>
 </div>

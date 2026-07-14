@@ -2,12 +2,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import FileResponse, Http404, HttpResponse
+from django.core.management import call_command
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.db.models import Avg, F, ExpressionWrapper, DurationField
+from django.db.models import Avg, Count, F, ExpressionWrapper, DurationField
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
+from django.conf import settings
+import io
+import contextlib
 from datetime import timedelta
 
 @login_required
@@ -88,6 +94,7 @@ def index(request):
     status = request.GET.get("status")
     priority = request.GET.get("priority")
     q = request.GET.get("q")
+    division = request.GET.get("division")
 
     if status:
         tickets = tickets.filter(status=status)
@@ -95,6 +102,8 @@ def index(request):
         tickets = tickets.filter(priority=priority)
     if q:
         tickets = tickets.filter(subject__icontains=q)
+    if division:
+        tickets = tickets.filter(division_id=division)
 
     paginator = Paginator(tickets, 10)
     page_obj = paginator.get_page(request.GET.get("page"))
@@ -418,6 +427,16 @@ def division_toggle_active(request, pk):
     return redirect("tickets:divisions")
 
 @login_required
+def division_delete(request, pk):
+    _admin_required(request.user)
+    division = get_object_or_404(Division, pk=pk)
+    if request.method == "POST":
+        name = division.name
+        division.delete()
+        messages.success(request, f"Divisi {name} berhasil dihapus.")
+    return redirect("tickets:divisions")
+
+@login_required
 def divisions_index(request):
     if request.method == "POST":
         _admin_required(request.user)
@@ -512,3 +531,23 @@ def reports_export_excel(request):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
+
+# ---------------------------------------------------------------------------
+# Webhook untuk trigger fetch_emails dari luar (GitHub Actions scheduled
+# workflow, gratis) — pengganti Render Cron Job yang berbayar.
+# Dilindungi oleh CRON_SECRET, bukan login, karena yang manggil bukan user.
+# ---------------------------------------------------------------------------
+
+@csrf_exempt
+@require_GET
+def fetch_emails_webhook(request):
+    token = request.GET.get("token", "")
+    expected = getattr(settings, "CRON_SECRET", "")
+    if not expected or token != expected:
+        raise Http404()
+
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+        call_command("fetch_emails")
+
+    return JsonResponse({"ok": True, "log": buffer.getvalue()})
