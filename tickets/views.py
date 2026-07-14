@@ -7,6 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Avg, F, ExpressionWrapper, DurationField
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
 
 @login_required
 def dashboard(request):
@@ -56,6 +58,27 @@ def _visible_tickets_for(user):
     if user.is_customer:
         return Ticket.objects.filter(created_by=user)
     return Ticket.objects.all()
+
+def _filter_tickets_by_period(tickets, request):
+    period = request.GET.get("period", "all")
+    now = timezone.now()
+    if period == "today":
+        return tickets.filter(created_at__date=now.date()), "HARI INI"
+    if period == "week":
+        return tickets.filter(created_at__gte=now - timedelta(days=7)), "MINGGU INI"
+    if period == "month":
+        return tickets.filter(created_at__year=now.year, created_at__month=now.month), "BULAN INI"
+    if period == "custom":
+        date_from = request.GET.get("date_from")
+        date_to = request.GET.get("date_to")
+        qs = tickets
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+        label = f"{date_from or '...'} s/d {date_to or '...'}"
+        return qs, label
+    return tickets, "SEMUA"
 
 
 @login_required
@@ -266,6 +289,17 @@ def users_index(request):
             messages.success(request, "Peran pengguna berhasil diubah.")
         return redirect("tickets:users")
 
+    if request.method == "POST" and request.POST.get("action") == "bulk_delete":
+        selected_ids = request.POST.getlist("selected_users")
+        # jaga-jaga: jangan pernah izinkan user menghapus akunnya sendiri lewat bulk action
+        selected_ids = [pk for pk in selected_ids if str(pk) != str(request.user.pk)]
+        if selected_ids:
+            deleted_count, _ = User.objects.filter(pk__in=selected_ids).delete()
+            messages.success(request, f"{len(selected_ids)} pengguna berhasil dihapus.")
+        else:
+            messages.warning(request, "Tidak ada pengguna yang dipilih untuk dihapus.")
+        return redirect("tickets:users")
+
     q = request.GET.get("q")
     role = request.GET.get("role")
 
@@ -383,6 +417,23 @@ def division_toggle_active(request, pk):
         )
     return redirect("tickets:divisions")
 
+@login_required
+def divisions_index(request):
+    if request.method == "POST":
+        _admin_required(request.user)
+        form = DivisionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Divisi baru berhasil dibuat.")
+            return redirect("tickets:divisions")
+    else:
+        form = DivisionForm()
+
+    return render(request, "tickets/divisions_index.html", {
+        "divisions": Division.objects.annotate(ticket_count=Count("tickets")).order_by("name"),
+        "form": form,
+    })
+
 
 # ---------------------------------------------------------------------------
 # Reports (+ export Excel)
@@ -391,62 +442,73 @@ def division_toggle_active(request, pk):
 @login_required
 def reports_index(request):
     tickets = _visible_tickets_for(request.user)
-    summary = {
-        "total": tickets.count(),
-        "open": tickets.filter(status=Ticket.Status.OPEN).count(),
-        "pending": tickets.filter(status=Ticket.Status.PENDING).count(),
-        "closed": tickets.filter(status=Ticket.Status.CLOSED).count(),
-    }
-    return render(request, "tickets/reports_index.html", {"summary": summary})
+    now = timezone.now()
 
+    tickets_period, _ = _filter_tickets_by_period(tickets, request)
+
+    summary = {
+        "total": tickets_period.count(),
+        "open": tickets_period.filter(status=Ticket.Status.OPEN).count(),
+        "pending": tickets_period.filter(status=Ticket.Status.PENDING).count(),
+        "closed": tickets_period.filter(status=Ticket.Status.CLOSED).count(),
+        "needs_attention": tickets.filter(priority=Ticket.Priority.HIGH).exclude(status=Ticket.Status.CLOSED).count(),
+        "this_month": tickets.filter(created_at__year=now.year, created_at__month=now.month).count(),
+    }
+
+    return render(request, "tickets/reports_index.html", {
+        "summary": summary,
+        "current_period": request.GET.get("period", "all"),
+        "date_from": request.GET.get("date_from", ""),
+        "date_to": request.GET.get("date_to", ""),
+        "recent_tickets": tickets.filter(created_at__gte=now - timedelta(days=7)).select_related("created_by").order_by("-created_at"),
+    })
 
 @login_required
 def reports_export_excel(request):
     from openpyxl import Workbook
-    from openpyxl.styles import Font
+    from openpyxl.styles import Font, PatternFill, Alignment
 
-    tickets = _visible_tickets_for(request.user).select_related(
-        "division", "assigned_to", "created_by"
-    ).order_by("-created_at")
+    tickets = _visible_tickets_for(request.user).select_related("division", "created_by")
+    tickets, period_label = _filter_tickets_by_period(tickets, request)
+    tickets = tickets.order_by("-created_at")
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Tickets"
+    ws.title = "Laporan Tiket"
 
-    headers = [
-        "Ticket Code", "Subject", "Status", "Priority", "Source", "Division",
-        "Dibuat Oleh", "Ditugaskan Ke", "Nama Perusahaan", "No. SJ", "Salesman",
-        "Invoice Status", "Dibuat Pada", "Diperbarui Pada",
-    ]
-    ws.append(headers)
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
+    headers = ["Nama Perusahaan", "Customer Name", "Issue", "Salesman", "Invoice (Y/N)", "Status"]
+    ws.merge_cells("A1:F1")
+    title_cell = ws.cell(row=1, column=1, value=f"LAPORAN TIKET {period_label} - {timezone.now().strftime('%d %B %Y').upper()}")
+    title_cell.font = Font(bold=True, size=14)
+    title_cell.fill = PatternFill("solid", fgColor="8DB4E2")
 
+    for col, text in enumerate(headers, start=1):
+        cell = ws.cell(row=2, column=col, value=text)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="4472C4")
+        cell.alignment = Alignment(horizontal="center")
+
+    row_idx = 3
     for t in tickets:
+        invoice_raw = (t.invoice_status or "").strip().lower()
+        invoice_yn = "Y" if "sudah" in invoice_raw or invoice_raw in ("y", "yes", "lunas") else ("N" if invoice_raw else "")
         ws.append([
-            t.ticket_code,
+            t.nama_perusahaan or (str(t.division) if t.division else "-"),
+            t.created_by.get_full_name() if t.created_by else "-",
             t.subject,
-            t.get_status_display(),
-            t.get_priority_display(),
-            t.get_source_display(),
-            str(t.division) if t.division else "",
-            str(t.created_by) if t.created_by else "",
-            str(t.assigned_to) if t.assigned_to else "",
-            t.nama_perusahaan,
-            t.no_sj,
             t.salesman,
-            t.invoice_status,
-            t.created_at.strftime("%Y-%m-%d %H:%M") if t.created_at else "",
-            t.updated_at.strftime("%Y-%m-%d %H:%M") if t.updated_at else "",
+            invoice_yn,
+            t.get_status_display(),
         ])
+        row_idx += 1
 
-    for i, column_cells in enumerate(ws.columns, start=1):
-        max_length = max((len(str(c.value)) for c in column_cells if c.value), default=10)
-        ws.column_dimensions[column_cells[0].column_letter].width = min(max_length + 2, 40)
+    widths = {"A": 38, "B": 20, "C": 63, "D": 13, "E": 18, "F": 10}
+    for col, w in widths.items():
+        ws.column_dimensions[col].width = w
 
-    response = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-    response["Content-Disposition"] = 'attachment; filename="tickets_export.xlsx"'
+    from django.http import HttpResponse
+    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    filename = f"laporan-tiket-{timezone.now().strftime('%Y-%m-%d')}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response

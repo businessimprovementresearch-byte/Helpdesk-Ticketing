@@ -55,15 +55,13 @@
           </td>
           <td>
             <div class="d-flex align-items-center gap-2">
-              <div class="sidebar-user-avatar flex-shrink-0" style="width:32px;height:32px;font-size:.7rem;">{{
-                u|initials }}</div>
+              <div class="sidebar-user-avatar flex-shrink-0" style="width:32px;height:32px;font-size:.7rem;">{{u|initials }}</div>
               <span class="fw-semibold text-nowrap">{{ u.get_full_name|default:u.username }}</span>
             </div>
           </td>
           <td class="text-muted">{{ u.email }}</td>
           <td>
-            <span class="badge bg-{{ u.role|role_badge }}-subtle text-{{ u.role|role_badge }} border">{{
-              u.role|role_label }}</span>
+            <span class="badge bg-{{ u.role|role_badge }}-subtle text-{{ u.role|role_badge }} border">{{u.role|role_label }}</span>
           </td>
           <td class="text-muted">{{ u.date_joined|date:"d M Y" }}</td>
           <td class="text-end pe-3">
@@ -218,6 +216,10 @@
             </div>
           </div>
           <input type="hidden" name="username" id="auto-username">
+          <div class="form-check mt-3">
+            {{ create_form.is_active }}
+            <label class="form-check-label" for="{{ create_form.is_active.id_for_label }}">Aktifkan akun (bisa langsung login)</label>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>

@@ -194,6 +194,7 @@ class UserForm(forms.ModelForm):
             self.fields["password"].required = True
             self.fields["password_confirm"].required = True
             self.fields["password"].help_text = "Password awal untuk user ini."
+            self.fields["is_active"].initial = True
 
     def clean(self):
         cleaned = super().clean()

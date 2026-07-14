@@ -1,14 +1,101 @@
 {% extends "base.html" %}
-{% block title %}Reports{% endblock %}
+{% load ticket_extras %}
+{% block title %}Laporan{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h3 class="mb-0">Reports</h3>
-  <a href="{% url 'tickets:reports_export_excel' %}" class="btn btn-success">⬇ Export ke Excel</a>
+<h2 class="fw-bold mb-1">Laporan</h2>
+<p class="text-muted mb-4">Ringkasan aktivitas helpdesk Anda.</p>
+
+<div class="card-soft p-3 mb-4">
+  <div class="fw-semibold mb-2"><i class="bi bi-file-earmark-arrow-down me-1"></i> Export Laporan</div>
+  <form method="get" class="mb-3">
+    <div class="text-muted small mb-2">Periode:</div>
+    <div class="btn-group mb-2" role="group">
+      <button type="submit" name="period" value="today" class="btn btn-sm {% if current_period == 'today' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Hari Ini</button>
+      <button type="submit" name="period" value="week" class="btn btn-sm {% if current_period == 'week' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Minggu</button>
+      <button type="submit" name="period" value="month" class="btn btn-sm {% if current_period == 'month' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Bulan</button>
+      <button type="submit" name="period" value="all" class="btn btn-sm {% if current_period == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Semua</button>
+      <button type="submit" name="period" value="custom" class="btn btn-sm {% if current_period == 'custom' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Kustom</button>
+    </div>
+    {% if current_period == 'custom' %}
+    <div class="d-flex gap-2 align-items-end mt-2">
+      <div>
+        <label class="form-label small">Dari</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+      </div>
+      <div>
+        <label class="form-label small">Sampai</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+      </div>
+      <input type="hidden" name="period" value="custom">
+      <button type="submit" class="btn btn-sm btn-primary">Terapkan</button>
+    </div>
+    {% endif %}
+  </form>
+  <a href="{% url 'tickets:reports_export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+    <i class="bi bi-download me-1"></i> Download Excel
+  </a>
 </div>
-<div class="row g-3">
-  <div class="col-md-3"><div class="card bg-white p-3"><h6>Total Tiket</h6><h2>{{ summary.total }}</h2></div></div>
-  <div class="col-md-3"><div class="card bg-white p-3"><h6>Open</h6><h2>{{ summary.open }}</h2></div></div>
-  <div class="col-md-3"><div class="card bg-white p-3"><h6>Pending</h6><h2>{{ summary.pending }}</h2></div></div>
-  <div class="col-md-3"><div class="card bg-white p-3"><h6>Closed</h6><h2>{{ summary.closed }}</h2></div></div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-card-icon mb-3" style="background:#f1f2f4;color:#495057;"><i class="bi bi-file-earmark-text-fill"></i></div>
+      <div class="stat-card-value">{{ summary.total }}</div>
+      <div class="stat-card-label">Total Tiket</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-card-icon mb-3" style="background:#e8f0fe;color:#2f5fdc;"><i class="bi bi-envelope-fill"></i></div>
+      <div class="stat-card-value" style="color:#2f5fdc;">{{ summary.open }}</div>
+      <div class="stat-card-label">Tiket Terbuka</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-card-icon mb-3" style="background:#fdf1e0;color:#d38a1f;"><i class="bi bi-clock-fill"></i></div>
+      <div class="stat-card-value" style="color:#d38a1f;">{{ summary.pending }}</div>
+      <div class="stat-card-label">Menunggu</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-card-icon mb-3" style="background:#e6f6ec;color:#22883f;"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="stat-card-value" style="color:#22883f;">{{ summary.closed }}</div>
+      <div class="stat-card-label">Selesai</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="stat-card" style="background:linear-gradient(135deg,#fff5f5,#ffffff);">
+      <div class="stat-card-icon mb-3" style="background:#fbe9ea;color:var(--color-primary);"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div class="stat-card-value" style="color:var(--color-primary);">{{ summary.needs_attention }}</div>
+      <div class="stat-card-label">Perlu Perhatian (Prioritas Tinggi Aktif)</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="stat-card" style="background:linear-gradient(135deg,#f2f3ff,#ffffff);">
+      <div class="stat-card-icon mb-3" style="background:#e9eaff;color:#4b4fd1;"><i class="bi bi-calendar-fill"></i></div>
+      <div class="stat-card-value" style="color:#4b4fd1;">{{ summary.this_month }}</div>
+      <div class="stat-card-label">Tiket Bulan Ini</div>
+    </div>
+  </div>
+</div>
+
+<div class="card-soft p-3">
+  <div class="fw-semibold mb-2 px-2 pt-1">5 Tiket Terbaru</div>
+  {% for t in recent_tickets %}
+  <a href="{% url 'tickets:detail' t.pk %}" class="d-flex justify-content-between align-items-center text-decoration-none text-dark px-2 py-3 border-top">
+    <div>
+      <div class="fw-semibold">{{ t.ticket_code|default:t.id }}</div>
+      <div class="text-muted small">{{ t.created_by.get_full_name|default:t.created_by.username }} · {{ t.created_at|timesince }} yang lalu</div>
+    </div>
+    <span class="badge bg-{{ t.status|status_badge }}-subtle text-{{ t.status|status_badge }} border">{{ t.status|status_id }}</span>
+  </a>
+  {% empty %}
+  <p class="text-muted px-2 py-3">Belum ada tiket.</p>
+  {% endfor %}
 </div>
 {% endblock %}

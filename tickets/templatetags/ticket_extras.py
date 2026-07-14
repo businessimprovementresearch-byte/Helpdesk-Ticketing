@@ -22,7 +22,12 @@ def initials(user):
     if not user:
         return "?"
     name = user.get_full_name() or user.username
-    return name[:2].upper() if name else "?"
+    if not name:
+        return "?"
+    parts = name.split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    return name[:2].upper()
 
 ROLE_LABEL = {"admin": "Admin", "agent": "Operator", "customer": "User"}
 ROLE_BADGE = {"admin": "danger", "agent": "primary", "customer": "secondary"}
