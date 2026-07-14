@@ -7,8 +7,7 @@
   <h2 class="fw-bold mb-0">{% if is_new %}Tambah Pengguna Baru{% else %}Edit Pengguna{% endif %}</h2>
 </div>
 <p class="text-muted mb-4">
-  {% if is_new %}Isi data pengguna baru.{% else %}Perbarui data akun {{
-  target_user.get_full_name|default:target_user.username }}.{% endif %}
+  {% if is_new %}Isi data pengguna baru.{% else %}Perbarui data akun {{ target_user.get_full_name|default:target_user.username }}.{% endif %}
 </p>
 
 <div class="card-soft p-4" style="max-width: 720px;">

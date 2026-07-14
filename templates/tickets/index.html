@@ -39,14 +39,12 @@
   <div class="d-flex justify-content-between align-items-center">
     <div>
       <span
-        class="badge bg-{{ ticket.status|status_badge }}-subtle text-{{ ticket.status|status_badge }} border mb-1">{{
-        ticket.status|status_id }}</span>
+        class="badge bg-{{ ticket.status|status_badge }}-subtle text-{{ ticket.status|status_badge }} border mb-1">{{ ticket.status|status_id }}</span>
       <div class="fw-semibold fs-5">{{ ticket.subject }}</div>
       <div class="text-muted small">
         {{ ticket.ticket_code|default:ticket.id }}
         {% if ticket.created_by %} · {{ ticket.created_by.get_full_name|default:ticket.created_by.username }}{% endif %}
-        {% if ticket.division %} · <span class="badge bg-primary-subtle text-primary border">{{ ticket.division
-          }}</span>{% endif %}
+        {% if ticket.division %} · <span class="badge bg-primary-subtle text-primary border">{{ ticket.division }}</span>{% endif %}
         · {{ ticket.created_at|timesince }} yang lalu
       </div>
     </div>

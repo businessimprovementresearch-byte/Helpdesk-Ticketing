@@ -71,19 +71,35 @@ class TicketForm(forms.ModelForm):
 
 
 class TicketReplyForm(forms.ModelForm):
+    is_internal_note = forms.BooleanField(
+        required=False,
+        label="Catatan Internal",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
     class Meta:
         model = TicketReply
-        fields = ["message", "type"]
+        fields = ["message"]
         widgets = {
             "message": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
         }
 
     def __init__(self, *args, can_use_internal_note=False, **kwargs):
         super().__init__(*args, **kwargs)
+        self.can_use_internal_note = can_use_internal_note
         if not can_use_internal_note:
             # Customer tidak boleh membuat internal note, jadi field-nya disembunyikan
-            self.fields["type"].widget = forms.HiddenInput()
-            self.initial["type"] = TicketReply.Type.PUBLIC_REPLY
+            del self.fields["is_internal_note"]
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.can_use_internal_note and self.cleaned_data.get("is_internal_note"):
+            instance.type = TicketReply.Type.INTERNAL_NOTE
+        else:
+            instance.type = TicketReply.Type.PUBLIC_REPLY
+        if commit:
+            instance.save()
+        return instance
 
 
 class MultiFileInput(forms.ClearableFileInput):
@@ -118,8 +134,8 @@ class TicketStatusForm(forms.ModelForm):
         model = Ticket
         fields = ["status", "priority", "division", "assigned_to"]
         widgets = {
-            "status": forms.Select(attrs={"class": "form-select form-select-sm"}),
-            "priority": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "status": forms.Select(attrs={"class": "form-select form-select-sm", "onchange": "this.form.submit()"}),
+            "priority": forms.Select(attrs={"class": "form-select form-select-sm", "onchange": "this.form.submit()"}),
             "division": forms.Select(attrs={"class": "form-select form-select-sm"}),
             "assigned_to": forms.Select(attrs={"class": "form-select form-select-sm"}),
         }

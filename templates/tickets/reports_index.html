@@ -102,11 +102,9 @@
     class="d-flex justify-content-between align-items-center text-decoration-none text-dark px-2 py-3 border-top">
     <div>
       <div class="fw-semibold">{{ t.ticket_code|default:t.id }}</div>
-      <div class="text-muted small">{{ t.created_by.get_full_name|default:t.created_by.username }} · {{
-        t.created_at|timesince }} yang lalu</div>
+      <div class="text-muted small">{{ t.created_by.get_full_name|default:t.created_by.username }} · {{ t.created_at|timesince }} yang lalu</div>
     </div>
-    <span class="badge bg-{{ t.status|status_badge }}-subtle text-{{ t.status|status_badge }} border">{{
-      t.status|status_id }}</span>
+    <span class="badge bg-{{ t.status|status_badge }}-subtle text-{{ t.status|status_badge }} border">{{ t.status|status_id }}</span>
   </a>
   {% empty %}
   <p class="text-muted px-2 py-3">Belum ada tiket.</p>

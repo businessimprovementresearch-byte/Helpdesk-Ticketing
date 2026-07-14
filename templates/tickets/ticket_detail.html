@@ -16,36 +16,6 @@
     </div>
     <p class="text-muted mb-4">{{ ticket.subject }}</p>
 
-    <!-- Status Management -->
-    {% if can_manage_status %}
-    <div class="card-soft p-3 mb-3">
-      <div class="fw-semibold small text-muted mb-2">Kelola Tiket</div>
-      <form method="post" class="row g-2 align-items-end">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_status">
-        <div class="col-md-3">
-          <label class="form-label small">Status</label>
-          {{ status_form.status }}
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small">Prioritas</label>
-          {{ status_form.priority }}
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small">Divisi</label>
-          {{ status_form.division }}
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small">Ditugaskan Ke</label>
-          {{ status_form.assigned_to }}
-        </div>
-        <div class="col-12">
-          <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Simpan Perubahan</button>
-        </div>
-      </form>
-    </div>
-    {% endif %}
-
     <!-- Replies -->
     {% for reply in replies %}
     <div class="card-soft p-3 mb-3{% if reply.type == 'internal_note' %} border-warning{% endif %}">
@@ -94,13 +64,11 @@
             </label>
 
             <!-- Internal Note Checkbox -->
-            {% if reply_form.type %}
+            {% if reply_form.is_internal_note %}
             <div class="form-check">
-              {{ reply_form.type }}
+              {{ reply_form.is_internal_note }}
               <label class="form-check-label small">Catatan Internal</label>
             </div>
-            {% else %}
-            {{ reply_form.type }}
             {% endif %}
 
           </div>
@@ -126,11 +94,26 @@
     <div class="card-soft p-3">
       <div class="fw-semibold mb-3">Detail</div>
 
+      {% if can_manage_status %}
+      <form method="post" id="status-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_status">
+        <input type="hidden" name="division" value="{{ ticket.division_id|default_if_none:'' }}">
+        <input type="hidden" name="assigned_to" value="{{ ticket.assigned_to_id|default_if_none:'' }}">
+
+        <label class="form-label small text-muted">Status</label>
+        <div class="mb-3">{{ status_form.status }}</div>
+
+        <label class="form-label small text-muted">Prioritas</label>
+        <div class="mb-3">{{ status_form.priority }}</div>
+      </form>
+      {% else %}
       <label class="form-label small text-muted">Status</label>
       <div class="mb-3">{{ ticket.status|status_id }}</div>
 
       <label class="form-label small text-muted">Prioritas</label>
       <div class="mb-3">{{ ticket.priority|priority_id }}</div>
+      {% endif %}
 
       <label class="form-label small text-muted">Divisi</label>
       <div class="mb-3">

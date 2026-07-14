@@ -54,8 +54,7 @@
                 style="width:8px;height:8px;border-radius:50%;background:var(--color-primary);display:inline-block;"></span>
             <div>
                 <div class="fw-semibold">{{ t.subject }}</div>
-                <div class="text-muted small">{{ t.created_by.get_full_name|default:t.created_by.username }} · {{
-                    t.updated_at|timesince }} yang lalu</div>
+                <div class="text-muted small">{{ t.created_by.get_full_name|default:t.created_by.username }} · {{ t.updated_at|timesince }} yang lalu</div>
             </div>
         </div>
         <i class="bi bi-chevron-right text-muted"></i>
