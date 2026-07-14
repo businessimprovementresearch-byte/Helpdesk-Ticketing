@@ -6,25 +6,39 @@
     <h2 class="fw-bold mb-1">Kelola Divisi</h2>
     <p class="text-muted mb-0">Tambah, edit, dan kelola divisi untuk kode tiket otomatis.</p>
   </div>
+  <button type="button" class="btn btn-primary text-nowrap" id="toggleAddDivisiBtn" onclick="toggleAddDivisi()">
+    <i class="bi bi-plus-lg"></i> Tambah Divisi
+  </button>
 </div>
 
-<div class="card-soft p-4 mb-4">
+<div class="card-soft p-4 mb-4 {% if not open_form %}d-none{% endif %}" id="addDivisiPanel">
   <div class="fw-semibold mb-3">Tambah Divisi Baru</div>
   <form method="post">
     {% csrf_token %}
+    {{ form.non_field_errors }}
     <div class="row g-3 mb-3">
       <div class="col-md-6">
         <label class="form-label">Nama Divisi</label>
         {{ form.name }}
+        {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
       </div>
       <div class="col-md-6">
         <label class="form-label">Kode Divisi</label>
         {{ form.code }}
         <div class="form-text">Akan digunakan sebagai prefix kode tiket (misal: OK-001)</div>
+        {% if form.code.errors %}<div class="text-danger small">{{ form.code.errors }}</div>{% endif %}
       </div>
     </div>
     <button type="submit" class="btn btn-primary">Simpan</button>
-    <a href="{% url 'tickets:divisions' %}" class="btn btn-link text-secondary">Batal</a>
+    <button type="button" class="btn btn-link text-secondary" onclick="toggleAddDivisi(false)">Batal</button>
+  </form>
+</div>
+
+<div class="card-soft p-3 mb-3">
+  <form method="get" class="d-flex gap-2">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Cari divisi berdasarkan nama atau kode...">
+    <button type="submit" class="btn btn-light text-nowrap"><i class="bi bi-search"></i> Cari</button>
+    {% if q %}<a href="{% url 'tickets:divisions' %}" class="btn btn-link text-secondary text-nowrap">Reset</a>{% endif %}
   </form>
 </div>
 
@@ -59,7 +73,9 @@
     </div>
   </div>
 {% empty %}
-  <p class="text-muted px-2 py-3">Belum ada divisi.</p>
+  <p class="text-muted px-2 py-3">
+    {% if q %}Tidak ada divisi yang cocok dengan pencarian "{{ q }}".{% else %}Belum ada divisi.{% endif %}
+  </p>
 {% endfor %}
 </div>
 
@@ -72,4 +88,17 @@
     </div>
   </div>
 </div>
+
+<script>
+  function toggleAddDivisi(forceOpen) {
+    const panel = document.getElementById('addDivisiPanel');
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : panel.classList.contains('d-none');
+    panel.classList.toggle('d-none', !shouldOpen);
+    if (shouldOpen) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const firstInput = panel.querySelector('input');
+      if (firstInput) firstInput.focus();
+    }
+  }
+</script>
 {% endblock %}

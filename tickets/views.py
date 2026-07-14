@@ -380,11 +380,6 @@ def user_delete(request, pk):
 # ---------------------------------------------------------------------------
 
 @login_required
-def divisions_index(request):
-    return render(request, "tickets/divisions_index.html", {"divisions": Division.objects.all()})
-
-
-@login_required
 def division_create(request):
     _admin_required(request.user)
     if request.method == "POST":
@@ -438,6 +433,7 @@ def division_delete(request, pk):
 
 @login_required
 def divisions_index(request):
+    open_form = False
     if request.method == "POST":
         _admin_required(request.user)
         form = DivisionForm(request.POST)
@@ -445,14 +441,21 @@ def divisions_index(request):
             form.save()
             messages.success(request, "Divisi baru berhasil dibuat.")
             return redirect("tickets:divisions")
+        open_form = True
     else:
         form = DivisionForm()
 
-    return render(request, "tickets/divisions_index.html", {
-        "divisions": Division.objects.annotate(ticket_count=Count("tickets")).order_by("name"),
-        "form": form,
-    })
+    q = request.GET.get("q", "").strip()
+    divisions = Division.objects.annotate(ticket_count=Count("tickets")).order_by("name")
+    if q:
+        divisions = divisions.filter(Q(name__icontains=q) | Q(code__icontains=q))
 
+    return render(request, "tickets/divisions_index.html", {
+        "divisions": divisions,
+        "form": form,
+        "q": q,
+        "open_form": open_form,
+    })
 
 # ---------------------------------------------------------------------------
 # Reports (+ export Excel)

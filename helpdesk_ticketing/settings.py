@@ -226,6 +226,11 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 if not EMAIL_HOST_USER:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+# Alamat yang selalu di-CC di setiap notifikasi email tiket (pisahkan dengan
+# koma kalau lebih dari satu, misal: "a@x.com,b@x.com").
+TICKET_NOTIFICATION_CC = [
+    e.strip() for e in os.getenv('TICKET_NOTIFICATION_CC', 'surat.selectro@gmail.com').split(',') if e.strip()
+]
 
 # ---------------------------------------------------------------------------
 # IMAP — dipakai oleh management command `fetch_emails` untuk mengubah email

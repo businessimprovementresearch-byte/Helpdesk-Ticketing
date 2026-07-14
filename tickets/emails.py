@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 
 from .models import Ticket
 
@@ -10,20 +10,42 @@ def ticket_email_subject(ticket: Ticket) -> str:
     return f"[Ticket #{ticket.id}] {ticket.subject}"
 
 
-def send_new_ticket_notification(ticket: Ticket):
-    recipients = [settings.EMAIL_HOST_USER] if settings.EMAIL_HOST_USER else []
-    if not recipients:
+def _send(subject: str, message: str, to: list[str], cc: list[str] | None = None):
+    """Helper kirim email + auto-CC ke TICKET_NOTIFICATION_CC (kalau ada)."""
+    to = [e for e in to if e]
+    if not to:
         return
-    send_mail(
+    cc = [e for e in (cc or []) if e and e not in to]
+    email = EmailMessage(
+        subject=subject,
+        body=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=to,
+        cc=cc or None,
+    )
+    email.send(fail_silently=True)
+
+
+def send_new_ticket_notification(ticket: Ticket):
+    """Kirim email konfirmasi ke pembuat tiket saat tiket baru dibuat, dengan
+    CC ke alamat pemantauan (TICKET_NOTIFICATION_CC, mis. surat.selectro@gmail.com)."""
+    if not (ticket.created_by and ticket.created_by.email):
+        return
+    _send(
         subject=ticket_email_subject(ticket),
         message=(
-            f"Tiket baru dibuat oleh {ticket.created_by}.\n\n"
-            f"Kategori: {ticket.category}\nPrioritas: {ticket.get_priority_display()}\n\n"
-            f"Lihat tiket di dashboard untuk detail."
+            f"Halo {ticket.created_by},\n\n"
+            f"Tiket Anda telah berhasil dibuat. Berikut detailnya:\n\n"
+            f"No. Referensi: {ticket.ticket_code}\n"
+            f"Subjek Tiket: {ticket.subject}\n"
+            f"Kategori: {ticket.category}\n"
+            f"Prioritas: {ticket.get_priority_display()}\n\n"
+            f"Tiket Anda sedang diproses. Tim kami akan segera meninjau dan "
+            f"merespons tiket Anda dalam waktu 1x24 jam.\n\n"
+            f"Terima kasih,\nTim Helpdesk Selectro"
         ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=recipients,
-        fail_silently=True,
+        to=[ticket.created_by.email],
+        cc=settings.TICKET_NOTIFICATION_CC,
     )
 
 
@@ -38,16 +60,15 @@ def send_status_change_notification(ticket, old_status, changed_by=None):
     if changed_by and changed_by.pk == getattr(ticket.created_by, "pk", None):
         return
 
-    send_mail(
+    _send(
         subject=ticket_email_subject(ticket),
         message=(
             f"Status tiket kamu berubah dari '{old_status}' menjadi "
             f"'{ticket.get_status_display()}'.\n\n"
             f"Lihat detail tiket di dashboard untuk info lebih lanjut."
         ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[ticket.created_by.email],
-        fail_silently=True,
+        to=[ticket.created_by.email],
+        cc=settings.TICKET_NOTIFICATION_CC,
     )
 
 
@@ -67,10 +88,9 @@ def send_reply_notification(reply):
     if not recipients:
         return
 
-    send_mail(
+    _send(
         subject=ticket_email_subject(ticket),
         message=reply.message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=recipients,
-        fail_silently=True,
+        to=recipients,
+        cc=settings.TICKET_NOTIFICATION_CC,
     )
