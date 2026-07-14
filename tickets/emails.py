@@ -3,6 +3,10 @@ from django.core.mail import EmailMessage
 
 from .models import Ticket
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def ticket_email_subject(ticket: Ticket) -> str:
     """Subject dengan tag [Ticket #ID] supaya balasan email bisa dicocokkan
@@ -11,9 +15,16 @@ def ticket_email_subject(ticket: Ticket) -> str:
 
 
 def _send(subject: str, message: str, to: list[str], cc: list[str] | None = None):
-    """Helper kirim email + auto-CC ke TICKET_NOTIFICATION_CC (kalau ada)."""
+    """Helper kirim email + auto-CC ke TICKET_NOTIFICATION_CC (kalau ada).
+
+    Kegagalan kirim email TIDAK boleh menggagalkan aksi utama (bikin tiket,
+    ubah status, dll), makanya exception ditangkap manual di sini — tapi
+    tetap dicatat ke console/log (bukan ditelan diam-diam kayak
+    fail_silently=True) supaya kelihatan pas debugging.
+    """
     to = [e for e in to if e]
     if not to:
+        logger.warning("Email notifikasi tiket dilewati: penerima 'to' kosong (subject=%r)", subject)
         return
     cc = [e for e in (cc or []) if e and e not in to]
     email = EmailMessage(
@@ -23,7 +34,10 @@ def _send(subject: str, message: str, to: list[str], cc: list[str] | None = None
         to=to,
         cc=cc or None,
     )
-    email.send(fail_silently=True)
+    try:
+        email.send(fail_silently=False)
+    except Exception:
+        logger.exception("Gagal mengirim email notifikasi tiket ke %s (cc=%s, subject=%r)", to, cc, subject)
 
 
 def send_new_ticket_notification(ticket: Ticket):
@@ -38,7 +52,6 @@ def send_new_ticket_notification(ticket: Ticket):
             f"Tiket Anda telah berhasil dibuat. Berikut detailnya:\n\n"
             f"No. Referensi: {ticket.ticket_code}\n"
             f"Subjek Tiket: {ticket.subject}\n"
-            f"Kategori: {ticket.category}\n"
             f"Prioritas: {ticket.get_priority_display()}\n\n"
             f"Tiket Anda sedang diproses. Tim kami akan segera meninjau dan "
             f"merespons tiket Anda dalam waktu 1x24 jam.\n\n"
