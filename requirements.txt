@@ -9,3 +9,4 @@ django-storages
 boto3
 imap-tools
 openpyxl
+django-anymail[resend]

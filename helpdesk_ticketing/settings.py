@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'storages',
+    'anymail',
     'accounts',
     'tickets',
 ]
@@ -212,19 +213,26 @@ else:
 # Email keluar (SMTP) — dipakai untuk notifikasi & balasan tiket
 # ---------------------------------------------------------------------------
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zoho.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
-EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
-# Kalau kredensial email belum diisi (misal saat development), tulis email ke
-# console saja biar gak error saat testing.
-if not EMAIL_HOST_USER:
+if RESEND_API_KEY:
+    # Kirim lewat HTTP API Resend (port 443) — tidak kena blokir SMTP Render
+    EMAIL_BACKEND = 'anymail.backends.resend.EmailBackend'
+    ANYMAIL = {
+        'RESEND_API_KEY': RESEND_API_KEY,
+    }
+elif EMAIL_HOST_USER:
+    # Fallback SMTP lama (kemungkinan timeout kalau host di Render free tier)
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zoho.com')
+    EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
+    EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+    EMAIL_TIMEOUT = 10
+else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Alamat yang selalu di-CC di setiap notifikasi email tiket (pisahkan dengan
