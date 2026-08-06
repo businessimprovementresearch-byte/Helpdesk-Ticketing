@@ -229,7 +229,10 @@ if not EMAIL_HOST_USER:
 # Alamat yang selalu di-CC di setiap notifikasi email tiket (pisahkan dengan
 # koma kalau lebih dari satu, misal: "a@x.com,b@x.com").
 TICKET_NOTIFICATION_CC = [
-    e.strip() for e in os.getenv('TICKET_NOTIFICATION_CC', 'surat.selectro@gmail.com').split(',') if e.strip()
+    e.strip() for e in os.getenv(
+        'TICKET_NOTIFICATION_CC',
+        'jasram@selectro.co.id,jagsham@orientraco.com,operations.spv@selectro.co.id,indra@selectro.co.id,tralog@selectro.co.id,internal.ops@selectro.co.id'
+    ).split(',') if e.strip()
 ]
 
 # ---------------------------------------------------------------------------
