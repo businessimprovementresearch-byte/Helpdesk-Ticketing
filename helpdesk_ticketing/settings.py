@@ -233,7 +233,7 @@ TICKET_NOTIFICATION_CC = [
     e.strip() for e in os.getenv(
         'TICKET_NOTIFICATION_CC',
         # 'jasram@selectro.co.id,jagsham@orientraco.com,operations.spv@selectro.co.id,indra@selectro.co.id,tralog@selectro.co.id,internal.ops@selectro.co.id'
-        'indra@selectro.co.id, project1@selectro.co.id'
+        'indra@selectro.co.id, project1@selectro.co.id, support@selectro.co.id'
     ).split(',') if e.strip()
 ]
 
