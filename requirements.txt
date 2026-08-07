@@ -10,3 +10,6 @@ boto3
 imap-tools
 openpyxl
 django-anymail[resend]
+google-auth
+google-auth-oauthlib
+google-api-python-client

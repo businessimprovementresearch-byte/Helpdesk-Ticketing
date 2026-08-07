@@ -209,22 +209,23 @@ else:
     MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# ---------------------------------------------------------------------------
-# Email keluar (SMTP) — dipakai untuk notifikasi & balasan tiket
-# ---------------------------------------------------------------------------
+GMAIL_REFRESH_TOKEN = os.getenv('GMAIL_REFRESH_TOKEN', '')
+GMAIL_CLIENT_ID = os.getenv('GMAIL_CLIENT_ID', '')
+GMAIL_CLIENT_SECRET = os.getenv('GMAIL_CLIENT_SECRET', '')
+GMAIL_SENDER_EMAIL = os.getenv('GMAIL_SENDER_EMAIL', '')
 
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', GMAIL_SENDER_EMAIL or EMAIL_HOST_USER)
 
-if RESEND_API_KEY:
-    # Kirim lewat HTTP API Resend (port 443) — tidak kena blokir SMTP Render
+if GMAIL_REFRESH_TOKEN:
+    EMAIL_BACKEND = 'tickets.gmail_api_backend.GmailAPIBackend'
+elif RESEND_API_KEY:
     EMAIL_BACKEND = 'anymail.backends.resend.EmailBackend'
     ANYMAIL = {
         'RESEND_API_KEY': RESEND_API_KEY,
     }
 elif EMAIL_HOST_USER:
-    # Fallback SMTP lama (kemungkinan timeout kalau host di Render free tier)
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zoho.com')
     EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
@@ -241,7 +242,7 @@ TICKET_NOTIFICATION_CC = [
     e.strip() for e in os.getenv(
         'TICKET_NOTIFICATION_CC',
         # 'jasram@selectro.co.id,jagsham@orientraco.com,operations.spv@selectro.co.id,indra@selectro.co.id,tralog@selectro.co.id,internal.ops@selectro.co.id'
-        'indra@selectro.co.id, project1@selectro.co.id'
+        'support@selectro.co.id, project1@selectro.co.id'
     ).split(',') if e.strip()
 ]
 
