@@ -43,6 +43,11 @@ RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+SITE_URL = os.getenv(
+    'SITE_URL',
+    f'https://{RENDER_EXTERNAL_HOSTNAME}' if RENDER_EXTERNAL_HOSTNAME else 'http://localhost:8000',
+)
+
 CSRF_TRUSTED_ORIGINS = [
     o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
 ]
@@ -241,8 +246,7 @@ else:
 TICKET_NOTIFICATION_CC = [
     e.strip() for e in os.getenv(
         'TICKET_NOTIFICATION_CC',
-        # 'jasram@selectro.co.id,jagsham@orientraco.com,operations.spv@selectro.co.id,indra@selectro.co.id,tralog@selectro.co.id,internal.ops@selectro.co.id'
-        'support@selectro.co.id, project1@selectro.co.id'
+        'jasram@selectro.co.id,jagsham@orientraco.com,operations.spv@selectro.co.id,indra@selectro.co.id,tralog@selectro.co.id,internal.ops@selectro.co.id'
     ).split(',') if e.strip()
 ]
 
