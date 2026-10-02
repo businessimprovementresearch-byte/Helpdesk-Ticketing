@@ -10,6 +10,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _support_recipients(ticket: Ticket | None = None) -> list[str]:
+    recipients: list[str] = []
+    if ticket and getattr(ticket, 'assigned_to', None) and getattr(ticket.assigned_to, 'email', None):
+        recipients.append(ticket.assigned_to.email)
+    if settings.DEFAULT_FROM_EMAIL:
+        recipients.append(settings.DEFAULT_FROM_EMAIL)
+    recipients.extend(settings.TICKET_NOTIFICATION_CC)
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for email in recipients:
+        value = (email or '').strip().lower()
+        if value and value not in seen:
+            seen.add(value)
+            ordered.append(email.strip())
+    return ordered
+
+
 def ticket_email_subject(ticket: Ticket) -> str:
     """Subject dengan tag [Ticket #ID] supaya balasan email bisa dicocokkan
     kembali ke tiket yang sama oleh management command fetch_emails."""
@@ -177,7 +195,7 @@ def send_reply_notification(reply):
     # Tentukan penerima: kalau yang balas agent/admin, notif ke customer pembuat
     # tiket; kalau yang balas customer, notif ke inbox support.
     if reply.author and reply.author.is_customer:
-        recipients = [settings.EMAIL_HOST_USER] if settings.EMAIL_HOST_USER else []
+        recipients = _support_recipients(ticket)
     else:
         recipients = [ticket.created_by.email] if ticket.created_by and ticket.created_by.email else []
 

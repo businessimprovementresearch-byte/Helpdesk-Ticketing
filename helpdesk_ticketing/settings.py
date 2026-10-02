@@ -187,7 +187,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # fallback ke filesystem lokal biasa.
 # ---------------------------------------------------------------------------
 
-USE_SUPABASE_STORAGE = bool(os.getenv('SUPABASE_S3_ACCESS_KEY_ID'))
+SUPABASE_S3_ACCESS_KEY_ID = os.getenv('SUPABASE_S3_ACCESS_KEY_ID', '')
+SUPABASE_S3_SECRET_ACCESS_KEY = os.getenv('SUPABASE_S3_SECRET_ACCESS_KEY', '')
+SUPABASE_S3_ENDPOINT_URL = os.getenv('SUPABASE_S3_ENDPOINT_URL', '')
+USE_SUPABASE_STORAGE = all([
+    SUPABASE_S3_ACCESS_KEY_ID,
+    SUPABASE_S3_SECRET_ACCESS_KEY,
+    SUPABASE_S3_ENDPOINT_URL,
+])
 
 STORAGES = {
     "staticfiles": {
@@ -221,7 +228,13 @@ GMAIL_SENDER_EMAIL = os.getenv('GMAIL_SENDER_EMAIL', '')
 
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', GMAIL_SENDER_EMAIL or EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = (
+    os.getenv('DEFAULT_FROM_EMAIL')
+    or GMAIL_SENDER_EMAIL
+    or EMAIL_HOST_USER
+    or ('onboarding@resend.dev' if RESEND_API_KEY else '')
+    or 'webmaster@localhost'
+)
 
 if GMAIL_REFRESH_TOKEN:
     EMAIL_BACKEND = 'tickets.gmail_api_backend.GmailAPIBackend'
@@ -247,7 +260,7 @@ TICKET_NOTIFICATION_CC = [
     e.strip() for e in os.getenv(
         'TICKET_NOTIFICATION_CC',
         # 'jasram@selectro.co.id,jagsham@orientraco.com,operations.spv@selectro.co.id,indra@selectro.co.id,tralog@selectro.co.id,internal.ops@selectro.co.id'
-        'surat.selectro@gail.com'
+        'surat.selectro@gmail.com'
     ).split(',') if e.strip()
 ]
 
