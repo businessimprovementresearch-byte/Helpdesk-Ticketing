@@ -78,27 +78,30 @@
       <div class="col-md-6">
         <label class="form-label">Password{% if is_new %} <span class="text-danger">*</span>{% endif %}</label>
         {{ form.password }}
-        {% if form.password.errors %}<div class="text-danger small">{{ form.password.errors }}</div>{% endif %}
+        {% if form.password.errors %}
+          <div class="text-danger small">{{ form.password.errors }}</div>
+        {% endif %}
       </div>
       <div class="col-md-6">
-        <label class="form-label">Konfirmasi Password{% if is_new %} <span class="text-danger">*</span>{% endif
-          %}</label>
-          {% if form.password_confirm.errors %}
+        <label class="form-label">Konfirmasi Password{% if is_new %} <span class="text-danger">*</span>{% endif %}</label>
+        {{ form.password_confirm }}
+        {% if form.password_confirm.errors %}
           <div class="text-danger small">{{ form.password_confirm.errors }}</div>
         {% endif %}
       </div>
     </div>
-    {% if not is_new %}
-    <p class="text-muted small mb-3">Kosongkan kedua field password di atas kalau tidak ingin mengubahnya.</p>
-    {% endif %}
 
-    <div class="form-check mb-4">
+    <div class="form-check mb-4 mt-3">
       {{ form.is_active }}
       <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Akun aktif (bisa login)</label>
     </div>
 
     <div class="d-flex justify-content-end gap-2">
       <a href="{% url 'tickets:users' %}" class="btn btn-outline-secondary">Batal</a>
-     <button type="submit" class="btn btn-primary"> {% if is_new %}Buat Akun{% else %}Simpan Perubahan{% endif %} </button>
+      <button type="submit" class="btn btn-primary">
+        {% if is_new %}Buat Akun{% else %}Simpan Perubahan{% endif %}
+      </button>
+    </div>
+  </form>
 </div>
 {% endblock %}
