@@ -99,9 +99,6 @@
 
     <div class="d-flex justify-content-end gap-2">
       <a href="{% url 'tickets:users' %}" class="btn btn-outline-secondary">Batal</a>
-      <button type="submit" class="btn btn-primary">{% if is_new %}Buat Akun{% else %}Simpan Perubahan{% endif
-        %}</button>
-    </div>
-  </form>
+     <button type="submit" class="btn btn-primary"> {% if is_new %}Buat Akun{% else %}Simpan Perubahan{% endif %} </button>
 </div>
 {% endblock %}

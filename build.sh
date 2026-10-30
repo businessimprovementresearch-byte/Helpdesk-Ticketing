@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build script dipakai oleh Render saat deploy.
+# Build script dipakai oleh Render saat deploy informasi diterima.
 set -o errexit
 
 pip install -r requirements.txt
